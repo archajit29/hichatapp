@@ -22,14 +22,20 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build and push Backend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: hichat-backend
           IMAGE_TAG: latest
         run: |
-          # This builds the folder named hichat-server on your laptop
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./hichat-server
-          
-          # This pushes it to the hichat-backend storage in AWS
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Build and push Frontend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: hichat-frontend
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./hichat-client
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
