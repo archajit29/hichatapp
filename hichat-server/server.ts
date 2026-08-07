@@ -11,6 +11,7 @@ import { roomsRouter } from "./src/routes/rooms";
 import { messagesRouter } from "./src/routes/messages";
 import { setupSocket } from "./src/socket/chatSocket";
 import "dotenv/config";
+import jwt from "jsonwebtoken"; // <-- add JWT verification
 
 // Load environment variables
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -67,7 +68,51 @@ const io = new Server(server, {
   maxHttpBufferSize: 1e7, // 10MB file buffer
 });
 
-setupSocket(io);
+// Socket.io connection handling (replaces setupSocket)
+io.on("connection", (socket) => {
+  // Verify JWT token from the auth payload
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    console.error("❌ Socket connection rejected: missing token");
+    return socket.disconnect(true);
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = payload; // attach user data to socket
+    console.log(`✅ Socket connected for user: ${socket.user.username}`);
+  } catch (err) {
+    console.error("❌ Invalid token on socket connection:", err);
+    return socket.disconnect(true);
+  }
+
+  // Handle the 'join' event from the client
+  socket.on("join", (data) => {
+    const { username, publicKey, room, status } = data;
+    // Join the specified room
+    socket.join(room);
+    console.log(`🔗 User ${username} joined room "${room}"`);
+
+    // Acknowledge the join
+    socket.emit("joined", {
+      room,
+      username,
+      status,
+    });
+  });
+
+  // Example: handle a generic message event
+  socket.on("message", (payload) => {
+    // Broadcast to room or handle as needed
+    console.log(`📨 Message from ${socket.user.username} in ${socket.id}:`, payload);
+    // TODO: emit to appropriate room or store in DB
+  });
+
+  // Cleanup on disconnect
+  socket.on("disconnect", (reason) => {
+    console.log(`❌ Socket disconnected: ${reason}`);
+  });
+});
 
 // Start listening
 server.listen(PORT, () => {
