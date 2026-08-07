@@ -54,6 +54,26 @@ app.get("/health", (c) => {
   });
 });
 
+// Login route for JWT token generation
+app.post("/api/auth/login", async (c) => {
+  const { email, password } = await c.json();
+
+  // Query for user by email or username
+  const rows = await db.prepare(`SELECT id, username, email, password_hash FROM users WHERE email = ? OR username = ?`).all(email, email);
+  if (rows.length === 0) {
+    return c.json({ error: "Invalid credentials" }, 401);
+  }
+  const user = rows[0];
+
+  // For simplicity, compare password directly (plain text)
+  if (password !== user.password_hash) {
+    return c.json({ error: "Invalid credentials" }, 401);
+  }
+
+  const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  return c.json({ token });
+});
+
 // Fallback route for any non‑API GET request (e.g., serving the React index page)
 app.get("*", async (c) => {
   // If you have a built React app in a folder called "public", you can serve it here:

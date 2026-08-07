@@ -38,20 +38,16 @@
         <p class="text-center text-gray-300 mb-8">
           A premium, real‑time chat experience with sleek design and secure messaging.
         </p>
-        <!-- Google Sign‑In button -->
-        <div class="g_id_onload"
-             data-ci="YOUR_GOOGLE_CLIENT_ID"
-             data-context="signin"
-             data-ux_mode="button"
-             data-size="large"
-             data-label="google">
-          <div class="g_id_signin"
-               data-type="standard"
-               data-shape="rectangular"
-               data-theme="outline"
-               data-text="signin_with"
-               data-logo="none">
-          </div>
+
+        <!-- Login Form -->
+        <div class="bg-white/90 rounded-xl shadow-xl p-6">
+          <h3 class="text-xl font-semibold mb-4 text-center">Login</h3>
+          <form id="loginForm" class="space-y-4">
+            <input type="email" id="email" placeholder="Email or Username" required class="w-full p-2 border rounded" />
+            <input type="password" id="password" placeholder="Password" required class="w-full p-2 border rounded" />
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Login</button>
+          </form>
+          <p class="text-sm text-gray-400">Don't have an account? <a href="#" class="text-indigo-400">Sign up</a></p>
         </div>
       </div>
     </section>
