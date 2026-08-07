@@ -20,24 +20,28 @@ type hub struct {
     clients map[*websocket.Conn]bool
 }
 
+// newHub creates a new hub.
 func newHub() *hub {
     return &hub{
         clients: make(map[*websocket.Conn]bool),
     }
 }
 
+// addClient registers a new connection.
 func (h *hub) addClient(conn *websocket.Conn) {
     h.mu.Lock()
     defer h.mu.Unlock()
     h.clients[conn] = true
 }
 
+// removeClient removes a connection.
 func (h *hub) removeClient(conn *websocket.Conn) {
     h.mu.Lock()
     defer h.mu.Unlock()
     delete(h.clients, conn)
 }
 
+// broadcast sends a message to all connected clients.
 func (h *hub) broadcast(message []byte) {
     h.mu.RLock()
     for conn := range h.clients {
@@ -73,22 +77,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
         h.removeClient(conn)
     }()
 
-    // Write loop: keep the connection alive (optional).
-    for {
-        select {
-        case message, ok := <-h.broadcast:
-            if !ok {
-                return
-            }
-            err := conn.WriteMessage(websocket.TextMessage, message)
-            if err != nil {
-                log.Println("write error:", err)
-                return
-            }
-        default:
-            // could send ping/pong here
-        }
-    }
+    // Keep the connection alive (optional).
+    // No write loop needed; messages are sent via broadcast.
 }
 
 func main() {
