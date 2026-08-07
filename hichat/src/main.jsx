@@ -83,6 +83,8 @@ if (loginForm) {
       // Re‑initialize socket with the new token
       initSocket();
       console.log('✅ Logged in');
+      // Redirect to the chat page (App)
+      window.location.href = '/';
     } else {
       const err = await response.json();
       alert(err.error || 'Login failed');
