@@ -11,7 +11,7 @@ import { setupSocket } from "./src/socket/chatSocket";
 import "dotenv/config";
 
 // Load environment variables
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 8080;
 
 // Initialize SQLite database schema
 initDb();
@@ -115,6 +115,7 @@ process.on("SIGINT", shutdown);
 // Start listening
 server.listen(PORT, () => {
   console.log(`🚀 HiChat Production Backend running on http://localhost:${PORT}`);
+  console.log("Press Ctrl+C to stop the server.");
 });
 
 
