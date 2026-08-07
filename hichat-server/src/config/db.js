@@ -70,21 +70,7 @@ const connectDB = async () => {
  * Register Mongoose connection event listeners.
  * These listeners provide helpful logs for debugging and monitoring.
  */
-mongoose.connection.on('connected', () => {
-  console.log('🔗 Mongoose connected to', MONGODB_URI);
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('⚠️ Mongoose connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('🔌 Mongoose disconnected');
-});
-
-mongoose.connection.on('reconnected', () => {
-  console.log('🔄 Mongoose reconnected');
-});
+// Remove Mongoose event listeners
 
 /**
  * Graceful shutdown: close the Mongoose connection when the Node process ends.
@@ -108,29 +94,16 @@ process.on('SIGUSR2', gracefulShutdown); // For nodemon restarts
 /*                               MONGOOSE MODELS                              */
 /* -------------------------------------------------------------------------- */
 
-const { Schema, model, Types } = mongoose;
-
-/**
- * User schema – mirrors the `UserRecord` interface used in the auth service.
- */
-const UserSchema = new Schema(
-  {
-    // Using a string ID (UUID) is common in the existing code, but we also keep the default ObjectId.
-    _id: { type: String, default: () => new Types.ObjectId().toString() },
-    username: { type: String, required: true, unique: true, index: true },
-    email: { type: String, required: true, unique: true, index: true },
-    password_hash: { type: String, required: true },
-    public_key: { type: String, default: null },
-    avatar_url: { type: String, default: null },
-    status: {
-      type: String,
-      enum: ['online', 'away', 'dnd', 'offline'],
-      default: 'online',
-    },
-    created_at: { type: Date, default: Date.now },
-  },
-  { collection: 'users', timestamps: { createdAt: 'created_at', updatedAt: false } }
-);
+// Define User model using SQLite
+const User = function(id, username, email, password_hash, public_key, avatar_url, status) {
+  this.id = id;
+  this.username = username;
+  this.email = email;
+  this.password_hash = password_hash;
+  this.public_key = public_key;
+  this.avatar_url = avatar_url;
+  this.status = status;
+};
 
 /**
  * Message schema – stores encrypted payloads per recipient.
