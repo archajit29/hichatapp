@@ -3,14 +3,14 @@ package main
 import (
     "log"
     "net/http"
-    "sync"
 
     "github.com/gorilla/websocket"
+    "sync"
 )
 
 var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
+    ReadBufferSize:  4096,
+    WriteBufferSize: 4096,
     CheckOrigin: func(r *http.Request) bool { return true },
 }
 
@@ -48,10 +48,14 @@ func (h *hub) broadcast(message []byte) {
         err := conn.WriteMessage(websocket.TextMessage, message)
         if err != nil {
             log.Printf("write error: %v", err)
+            // Cleanup broken connection
+            h.removeClient(conn)
         }
     }
     h.mu.RUnlock()
 }
+
+var hubInstance = newHub()
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     conn, err := upgrader.Upgrade(w, r, nil)
@@ -61,8 +65,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
     }
     defer conn.Close()
 
-    h := newHub()
-    h.addClient(conn)
+    hubInstance.addClient(conn)
 
     // Read loop: receive messages and broadcast them.
     go func() {
@@ -72,9 +75,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
                 log.Println("read error:", err)
                 break
             }
-            h.broadcast(msg)
+            hubInstance.broadcast(msg)
         }
-        h.removeClient(conn)
+        hubInstance.removeClient(conn)
     }()
 
     // Keep the connection alive (optional).
@@ -83,6 +86,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 func main() {
     http.HandleFunc("/ws", handleWebSocket)
-    log.Println("Yo, server listening on :8080")
+    log.Println("Server listening on :8080")
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
