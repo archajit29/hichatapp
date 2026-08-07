@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 
 // Navigation bar with clickable Home Chat, Login, and Dashboard links
 function Navigation() {
@@ -16,7 +16,7 @@ function Navigation() {
 // Main application component
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <Navigation />
         <main style={{ flex: 1, padding: '1rem' }}>
@@ -27,7 +27,7 @@ function App() {
           </Routes>
         </main>
       </div>
-    </Router>
+    </BrowserRouter>
   );
 }
 
