@@ -71,24 +71,25 @@ if (loginForm) {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      localStorage.setItem('access_token', data.token);
-      // Re‑initialize socket with the new token
-      initSocket();
-      console.log('✅ Logged in');
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('access_token', data.token);
+        // Re‑initialize socket with the new token
+        initSocket();
+        console.log('✅ Logged in');
     } else {
       const err = await response.json();
       alert(err.error || 'Login failed');
     }
   });
-});
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
