@@ -61,7 +61,7 @@ function initSocket() {
 // Initialize socket on page load if a token is already present
 if (localStorage.getItem('access_token')) {
   initSocket();
-});
+}
 
 // Handle login form submission
 const loginForm = document.getElementById('loginForm');
@@ -88,7 +88,7 @@ if (loginForm) {
       alert(err.error || 'Login failed');
     }
   });
-);
+});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
