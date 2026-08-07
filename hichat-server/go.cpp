@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 
 // hub maintains the set of active connections.
 type hub struct {
-    mu    sync.RWMutex
+    mu      sync.RWMutex
     clients map[*websocket.Conn]bool
 }
 
