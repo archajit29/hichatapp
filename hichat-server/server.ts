@@ -1,18 +1,20 @@
-// Import statements
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { readFileSync } from "fs";
 import { initDb } from "./src/db/db";
 import { authRouter } from "./src/routes/auth";
 import { usersRouter } from "./src/routes/users";
 import { roomsRouter } from "./src/routes/rooms";
 import { messagesRouter } from "./src/routes/messages";
 import { setupSocket } from "./src/socket/chatSocket";
+import "dotenv/config";
 
-// Frontend URL (adjust as needed for your environment)
-const FRONTEND_URL = "http://localhost:3000";
+// Load environment variables
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const PORT = Number(process.env.PORT) || 3001;
 
 // Initialize SQLite database schema
 initDb();
@@ -43,14 +45,10 @@ app.route("/api/users", usersRouter);
 app.route("/api/rooms", roomsRouter);
 app.route("/api/messages", messagesRouter);
 
-// System status endpoint
-app.get("/", (c) => {
+// Health check endpoint
+app.get("/health", (c) => {
   return c.json({
-    name: "HiChat Enterprise E2EE Platform",
-    status: "online",
-    region: "UAE / Dubai Cluster Ready",
-    runtime: "Bun v1.3 + Hono + Socket.io + SQLite WAL",
-    security: "ECDH P-256 + AES-GCM 256-bit E2EE",
+    status: "ok",
     timestamp: new Date().toISOString(),
   });
 });
@@ -72,7 +70,6 @@ const io = new Server(server, {
 setupSocket(io);
 
 // Start listening
-const PORT = Number(process.env.PORT) || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 HiChat Production Backend running on http://localhost:${PORT}`);
   console.log(`⚡ Dubai Enterprise Grade: Bun + Hono + Socket.io + SQLite E2EE Engine`);
