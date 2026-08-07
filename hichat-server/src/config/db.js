@@ -21,7 +21,7 @@ require('dotenv').config();
 
 // Pull the MongoDB URI from environment variables.
 // Fallback to a local development URI if not provided.
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/hichat';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydatabase';
 
 // Connection options that work well for a high‑throughput, WhatsApp‑like messaging service.
 const connectionOptions = {
