@@ -16,28 +16,11 @@
  *   - Exported `mongooseConnection` for direct access to the underlying Mongoose connection if needed.
  */
 
-const mongoose = require('mongoose');
-require('dotenv').config();
-
-// Pull the MongoDB URI from environment variables.
-// Fallback to a local development URI if not provided.
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydatabase';
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./hichat.db');
 
 // Connection options that work well for a high‑throughput, WhatsApp‑like messaging service.
-const connectionOptions = {
-  // Use the new MongoDB driver URL parser.
-  useNewUrlParser: true,
-  // Use the unified topology engine for better server discovery and monitoring.
-  useUnifiedTopology: true,
-  // Keep the socket open longer to accommodate bursts of traffic.
-  socketTimeoutMS: 30000,
-  // Fail fast if no server is available.
-  serverSelectionTimeoutMS: 5000,
-  // Automatically retry writes on transient network errors.
-  retryWrites: true,
-  // Enable index creation (useful for development; can be disabled in production).
-  autoIndex: true,
-};
+// No need for connection options with SQLite
 
 /**
  * Initialize the MongoDB connection.
@@ -46,11 +29,39 @@ const connectionOptions = {
  */
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGODB_URI, connectionOptions);
-    console.log('✅ MongoDB connected');
+    db.serialize(function() {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          public_key TEXT,
+          avatar_url TEXT,
+          status TEXT DEFAULT 'online'
+        );
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS messages (
+          id TEXT PRIMARY KEY,
+          room_id TEXT NOT NULL,
+          author TEXT NOT NULL,
+          content TEXT,
+          payloads TEXT NOT NULL,
+          is_deleted INTEGER DEFAULT 0
+        );
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS rooms (
+          id TEXT PRIMARY KEY,
+          name TEXT UNIQUE NOT NULL,
+          participants TEXT
+        );
+      `);
+    });
+    console.log('✅ SQLite database connected and initialized');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
-    // Exit the process if we cannot connect – the app cannot function without a DB.
+    console.error('❌ SQLite connection error:', err);
     process.exit(1);
   }
 };
