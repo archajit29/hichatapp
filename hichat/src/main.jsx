@@ -33,7 +33,7 @@ function App() {
 
 // Placeholder components (replace with actual implementations)
 function HomeChat() {
-  return <div>Hey there! Welcome to the Home Chat!</div>;
+  return <div>Hey! Welcome to the chat!</div>;
 }
 function Login() {
   return <div>Login Page</div>;
