@@ -54,6 +54,14 @@ app.get("/health", (c) => {
   });
 });
 
+// Fallback route for any non‑API GET request (e.g., serving the React index page)
+app.get("*", async (c) => {
+  // If you have a built React app in a folder called "public", you can serve it here:
+  // return c.text(await readFileSync("./public/index.html", "utf8"));
+  // For now, return a simple message to confirm the server is reachable.
+  return c.text("<h1>HiChat Backend is running</h1>");
+});
+
 // HTTP server setup
 import { getRequestListener } from "@hono/node-server";
 
