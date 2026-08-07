@@ -1,3 +1,4 @@
+// Import statements
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
@@ -10,6 +11,9 @@ import { roomsRouter } from "./src/routes/rooms";
 import { messagesRouter } from "./src/routes/messages";
 import { setupSocket } from "./src/socket/chatSocket";
 
+// Frontend URL (adjust as needed for your environment)
+const FRONTEND_URL = "http://localhost:3000";
+
 // Initialize SQLite database schema
 initDb();
 
@@ -18,7 +22,7 @@ const app = new Hono();
 
 // Global Middleware & Security Headers
 app.use("*", cors({
-  origin: "*",
+  origin: FRONTEND_URL,
   allowHeaders: ["Content-Type", "Authorization", "X-Client-Version"],
   allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 }));
@@ -51,15 +55,15 @@ app.get("/", (c) => {
   });
 });
 
+// HTTP server setup
 import { getRequestListener } from "@hono/node-server";
 
-// Create HTTP server wrapper
 const server = createServer(getRequestListener(app.fetch));
 
-// Initialize Socket.io gateway
+// Initialize Socket.io gateway with matching CORS
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"],
   },
   maxHttpBufferSize: 1e7, // 10MB file buffer
