@@ -2,12 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 
-// Navigation bar with clickable Home Chat and Login links
+// Navigation bar with clickable Home Chat, Login, and Dashboard links
 function Navigation() {
   return (
     <nav style={{ display: 'flex', gap: '1rem', padding: '0.5rem', backgroundColor: '#f0f0f0' }}>
       <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>Home Chat</Link>
       <Link to="/login" style={{ textDecoration: 'none', color: 'inherit' }}>Login</Link>
+      <Link to="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>Dashboard</Link>
     </nav>
   );
 }
@@ -22,6 +23,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomeChat />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
       </div>
@@ -35,6 +37,14 @@ function HomeChat() {
 }
 function Login() {
   return <div>Login Page</div>;
+}
+function Dashboard() {
+  return (
+    <div style={{ padding: '1rem' }}>
+      <h2>Dashboard</h2>
+      <p>This is the new dashboard page.</p>
+    </div>
+  );
 }
 
 // Render the app
