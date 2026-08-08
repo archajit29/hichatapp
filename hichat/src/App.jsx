@@ -1,170 +1,188 @@
-import { useState, useEffect, useRef } from 'react'
-import io from 'socket.io-client'
-import { generateKeyPair, exportPublicKey, importPublicKey, encryptMessage, decryptMessage } from './cryptoUtils'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import Login from './pages/Login';
+import Chat from './pages/Chat';
 
-const socket = io('http://localhost:3001')
-
-function App() {
-  const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
-  const [username, setUsername] = useState('')
-  const [isJoined, setIsJoined] = useState(false)
-  const [keyPair, setKeyPair] = useState(null)
-  const [otherUsers, setOtherUsers] = useState(new Map()) // socketId -> { username, publicKey }
-  const messagesEndRef = useRef(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  useEffect(() => {
-    // Listen for new messages
-    socket.on('receive_message', async (data) => {
-      try {
-        // Find the payload intended for this user
-        const myPayload = data.payloads[socket.id]
-        if (myPayload && keyPair) {
-          const decryptedText = await decryptMessage(myPayload, keyPair.privateKey)
-          setMessages((prev) => [...prev, { ...data, message: decryptedText, isEncrypted: true }])
-        } else if (data.author === username) {
-          // Fallback for self-sent messages if needed, though we encrypt for ourselves too
-        }
-      } catch (err) {
-        console.error("Failed to decrypt message:", err)
-        setMessages((prev) => [...prev, { ...data, message: "[Decryption Failed]", isEncrypted: false }])
-      }
-    })
-
-    // Listen for users joining
-    socket.on('user_joined', async (data) => {
-      const pubKey = await importPublicKey(data.publicKey)
-      setOtherUsers(prev => new Map(prev).set(data.socketId, { username: data.username, publicKey: pubKey }))
-      console.log(`User ${data.username} joined. Keys updated.`)
-    })
-
-    // Get list of existing users
-    socket.on('existing_users', async (usersList) => {
-      const newMap = new Map()
-      for (const u of usersList) {
-        const pubKey = await importPublicKey(u.publicKey)
-        newMap.set(u.socketId, { username: u.username, publicKey: pubKey })
-      }
-      setOtherUsers(newMap)
-    })
-
-    // Listen for users leaving
-    socket.on('user_left', (data) => {
-      setOtherUsers(prev => {
-        const next = new Map(prev)
-        next.delete(data.socketId)
-        return next
-      })
-    })
-
-    return () => {
-      socket.off('receive_message')
-      socket.off('user_joined')
-      socket.off('existing_users')
-      socket.off('user_left')
-    }
-  }, [keyPair, username])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const sendMessage = async (e) => {
-    e.preventDefault()
-    if (input.trim() && username && keyPair) {
-      const payloads = {}
-      
-      // 1. Encrypt for ourselves (so we can see it)
-      const myPublicKey = await importPublicKey(await exportPublicKey(keyPair.publicKey))
-      payloads[socket.id] = await encryptMessage(input, myPublicKey)
-
-      // 2. Encrypt for everyone else
-      for (const [socketId, user] of otherUsers.entries()) {
-        payloads[socketId] = await encryptMessage(input, user.publicKey)
-      }
-
-      const messageData = {
-        author: username,
-        payloads: payloads,
-        time: new Date().toLocaleTimeString(),
-      }
-
-      socket.emit('send_message', messageData)
-      setInput('')
-    }
-  }
-
-  const joinChat = async (e) => {
-    e.preventDefault()
-    if (username.trim()) {
-      const keys = await generateKeyPair()
-      const pubKeyJWK = await exportPublicKey(keys.publicKey)
-      setKeyPair(keys)
-      setIsJoined(true)
-      socket.emit('join', { username, publicKey: pubKeyJWK })
-    }
-  }
-
-  if (!isJoined) {
-    return (
-      <div className="join-container">
-        <h1>HiChat <span style={{fontSize: '0.8rem', color: '#4caf50'}}>E2EE</span></h1>
-        <p>Your messages are encrypted before they leave your browser.</p>
-        <form onSubmit={joinChat}>
-          <input
-            type="text"
-            placeholder="Enter your name..."
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <button type="submit">Generate Keys & Join</button>
-        </form>
-      </div>
-    )
-  }
-
+// Premium Navigation Bar (Global for Chat/Login)
+function Navigation({ isLoggedIn, username, onLogout }) {
   return (
-    <div className="chat-app">
-      <header>
-        <div>
-          <h2>HiChat <span className="encrypted-badge">E2EE ACTIVE</span></h2>
+    <nav className="flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900 text-white shadow-lg w-full">
+      <div className="flex items-center gap-8">
+        <Link to="/welcome" className="text-2xl font-extrabold tracking-tighter text-white hover:text-purple-300 transition">hichat</Link>
+        <div className="flex gap-6">
+          <Link to="/" className="text-white/80 hover:text-white transition">Home</Link>
+          <Link to="/chat" className="text-white/80 hover:text-white transition">Chat</Link>
+          <Link to="/login" className="text-white/80 hover:text-white font-semibold transition">
+            {isLoggedIn ? 'Vault Profile' : 'Login'}
+          </Link>
         </div>
-        <p>Logged in as: <strong>{username}</strong></p>
-      </header>
+      </div>
       
-      <div className="messages-container">
-        {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.author === username ? 'sent' : 'received'}`}>
-            <div className="message-content">
-              <span className="author">{msg.author} {msg.isEncrypted && <span className="encrypted-badge">🔒</span>}</span>
-              <p>{msg.message}</p>
-              <span className="time">{msg.time}</span>
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="active-users" style={{fontSize: '0.7rem', padding: '5px', color: '#666'}}>
-        Active: {otherUsers.size + 1} users (keys exchanged)
-      </div>
-
-      <form className="input-area" onSubmit={sendMessage}>
-        <input
-          type="text"
-          placeholder="Type an encrypted message..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button type="submit">Send</button>
-      </form>
-    </div>
-  )
+      {isLoggedIn && (
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-white/60">
+            Secure Session: <strong className="text-white">{username}</strong>
+          </span>
+          <button 
+            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded text-sm transition"
+            onClick={onLogout}
+          >
+            Sign Out
+          </button>
+        </div>
+      )}
+    </nav>
+  );
 }
 
-export default App
+function HomePage() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
+      {/* Navigation Header */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
+        <Link to="/welcome" className="text-2xl font-bold text-white cursor-pointer">hichat</Link>
+        <div className="space-x-6">
+          <Link to="/" className="text-white hover:text-purple-300">Home</Link>
+          <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
+          <Link to="/login" className="text-white hover:text-purple-300 font-semibold">Login</Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="flex-grow flex flex-col items-center justify-center text-center px-4">
+        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">Welcome to hichat</h1>
+        <p className="text-xl text-gray-400 max-w-2xl mb-10 leading-relaxed">
+          Experience the future of real-time messaging. End-to-end encrypted, high-performance, and beautifully designed.
+        </p>
+        <div className="flex space-x-4">
+          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">
+            Launch Chat Stream
+          </Link>
+          <Link to="/login" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition">
+            Unlock Key Vault
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full text-center py-6 bg-[#0a0a0f] text-gray-600 text-sm border-t border-gray-800">
+        © 2025 hichat Enterprise. All rights reserved.
+      </footer>
+    </div>
+  );
+}
+
+function WelcomePage() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
+      {/* Navigation Header */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
+        <Link to="/welcome" className="text-2xl font-bold text-white cursor-pointer">hichat</Link>
+        <div className="space-x-6">
+          <Link to="/" className="text-white hover:text-purple-300">Home</Link>
+          <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
+          <Link to="/login" className="text-white hover:text-purple-300 font-semibold">Login</Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="flex-grow flex flex-col items-center justify-center text-center px-4">
+        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">Welcome to hichat</h1>
+        <p className="text-xl text-gray-400 max-w-2xl mb-10 leading-relaxed">
+          Experience the future of real-time messaging. End-to-end encrypted, high-performance, and beautifully designed.
+        </p>
+        <div className="flex space-x-4">
+          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">
+            Launch Chat Stream
+          </Link>
+          <Link to="/login" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition">
+            Unlock Key Vault
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full text-center py-6 bg-[#0a0a0f] text-gray-600 text-sm border-t border-gray-800">
+        © 2025 hichat Enterprise. All rights reserved.
+      </footer>
+    </div>
+  );
+}
+
+// Footer Component (Global for Chat/Login)
+function Footer() {
+  return (
+    <footer className="py-8 text-center text-gray-500 text-sm border-t border-white/5 w-full">
+      <p>© 2025 hichat Enterprise. All rights reserved.</p>
+    </footer>
+  );
+}
+
+export default function App() {
+  const [session, setSession] = useState({
+    isLoggedIn: false,
+    username: '',
+  });
+
+  const syncSession = () => {
+    const token = localStorage.getItem('hichat_jwt_token');
+    const userStr = localStorage.getItem('hichat_user');
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setSession({ isLoggedIn: true, username: user.username });
+      } catch (e) {
+        setSession({ isLoggedIn: false, username: '' });
+      }
+    } else {
+      setSession({ isLoggedIn: false, username: '' });
+    }
+  };
+
+  useEffect(() => {
+    syncSession();
+    const interval = setInterval(syncSession, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('hichat_jwt_token');
+    localStorage.removeItem('hichat_user');
+    setSession({ isLoggedIn: false, username: '' });
+    window.location.href = '/login';
+  };
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/welcome" element={<WelcomePage />} />
+        
+        {/* For Chat and Login, we use the standard layout with global nav/footer */}
+        <Route path="/chat" element={
+          <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+            <Navigation isLoggedIn={session.isLoggedIn} username={session.username} onLogout={handleLogout} />
+            <main className="flex-grow flex flex-col"><Chat /></main>
+            <Footer />
+          </div>
+        } />
+        
+        <Route path="/login" element={
+          <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+            <Navigation isLoggedIn={session.isLoggedIn} username={session.username} onLogout={handleLogout} />
+            <main className="flex-grow flex flex-col"><Login /></main>
+            <Footer />
+          </div>
+        } />
+
+        <Route path="*" element={
+          <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center">
+            <h2 className="text-4xl font-bold mb-4">404 - Not Found</h2>
+            <Link to="/" className="text-indigo-400 hover:underline">Return Home</Link>
+          </div>
+        } />
+      </Routes>
+    </BrowserRouter>
+  );
+}
