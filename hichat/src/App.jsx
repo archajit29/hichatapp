@@ -77,7 +77,7 @@ function WelcomePage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
       {/* Navigation Header */}
       <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
-        <Link to="/welcome" className="text-2xl font-bold text-white cursor-pointer">hichat</Link>
+        <Link to="/welcome" className="text-2xl font-bold text-white">hichat</Link>
         <div className="space-x-6">
           <Link to="/" className="text-white hover:text-purple-300">Home</Link>
           <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
@@ -155,8 +155,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/home" element={<HomePage />} />
+        <Route path="/" element={<WelcomePage />} />
+        <Route path="/home" element={<WelcomePage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         
         {/* For Chat and Login, we use the standard layout with global nav/footer */}
