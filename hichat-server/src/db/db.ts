@@ -72,6 +72,7 @@ export function initDb() {
     { id: "tech-lounge", name: "tech-lounge", description: "Bun, Hono & High-Perf Systems", is_private: 0 },
     { id: "crypto-security", name: "crypto-security", description: "E2EE, Security & Web Crypto", is_private: 0 },
     { id: "dubai-tech-hub", name: "dubai-tech-hub", description: "UAE & Middle East Tech Lounge", is_private: 0 },
+    { id: "announcements", name: "announcements", description: "Official announcements", is_private: 0 },
   ];
 
   const stmt = db.prepare(`
