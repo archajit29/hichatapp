@@ -24,7 +24,7 @@ export default function WelcomePage() {
 
       {/* Hero section */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-5xl font-bold mb-4">Welcome to hichat Enterprise</h1>
+        <h1 className="text-5xl font-bold mb-4">Hey there, welcome to hichat Enterprise</h1>
         <p className="text-lg mb-8">
           Secure, fast, and premium messaging for your team.
         </p>
