@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 
@@ -35,27 +35,43 @@ function Navigation({ isLoggedIn, username, onLogout }) {
   );
 }
 
-function HomePage() {
+function HomePage({ session, onLogout }) {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
       {/* Navigation Header */}
       <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
         <Link to="/welcome" className="text-2xl font-bold text-white cursor-pointer">hichat</Link>
-        <div className="space-x-6">
-          <Link to="/" className="text-white hover:text-purple-300">Home</Link>
+        <div className="flex items-center space-x-6">
+          <Link to="/" className="text-white hover:text-purple-300 font-semibold">Home</Link>
           <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
-          <Link to="/login" className="text-white hover:text-purple-300 font-semibold">Login</Link>
+          <Link to="/login" className="text-white hover:text-purple-300">
+            {session?.isLoggedIn ? 'Vault Profile' : 'Login'}
+          </Link>
+          {session?.isLoggedIn && (
+            <div className="flex items-center gap-3 ml-2">
+              <span className="text-xs text-purple-200">
+                User: <strong className="text-white">{session.username}</strong>
+              </span>
+              <button 
+                className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-xs transition"
+                onClick={onLogout}
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="flex-grow flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">Welcome to hichat</h1>
-        <p className="text-xl text-gray-400 max-w-2xl mb-10 leading-relaxed">
-          Experience the future of real-time messaging. End-to-end encrypted, high-performance, and beautifully designed.
+      <main className="flex-grow flex flex-col items-center justify-center text-center px-4 py-12">
+        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">hichat Home Hub</h1>
+        <p className="text-xl text-gray-400 max-w-2xl mb-8 leading-relaxed">
+          Welcome to your enterprise communication hub. Connect instantly or unlock your security key vault.
         </p>
+
         <div className="flex space-x-4">
-          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">
+          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition shadow-lg">
             Launch Chat Stream
           </Link>
           <Link to="/login" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition">
@@ -155,8 +171,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<WelcomePage />} />
-        <Route path="/home" element={<WelcomePage />} />
+        <Route path="/" element={<HomePage session={session} onLogout={handleLogout} />} />
+        <Route path="/home" element={<HomePage session={session} onLogout={handleLogout} />} />
         <Route path="/welcome" element={<WelcomePage />} />
         
         {/* For Chat and Login, we use the standard layout with global nav/footer */}
