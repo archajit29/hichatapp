@@ -1,65 +1,171 @@
 import { Server, Socket } from "socket.io";
 import { db } from "../db/db";
 
+/**
+ * Enum representing possible user presence statuses.
+ */
+enum UserStatus {
+  ONLINE = "online",
+  AWAY = "away",
+  DND = "dnd",
+  OFFLINE = "offline",
+}
+
+/**
+ * Interface describing an active user attached to a socket.
+ */
 interface ActiveUser {
   userId?: string;
   username: string;
   publicKey: string;
   socketId: string;
   currentRoom: string;
-  status: "online" | "away" | "dnd" | "offline";
+  status: UserStatus;
   customStatus?: string;
 }
 
-const activeSockets = new Map<string, ActiveUser>();
+/**
+ * Payload definitions for socket events.
+ */
+interface JoinData {
+  userId?: string;
+  username: string;
+  publicKey: string;
+  room?: string;
+  status?: keyof typeof UserStatus;
+}
 
+interface SwitchRoomData {
+  newRoom: string;
+}
+
+interface UpdateStatusData {
+  status: keyof typeof UserStatus;
+}
+
+interface SendMessageData {
+  roomId: string;
+  senderId?: string;
+  author: string;
+  payloads: Record<string, string>;
+  mediaUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  time?: string;
+}
+
+interface DeleteMessageData {
+  messageId: string;
+  roomId: string;
+}
+
+interface TypingData {
+  username: string;
+  roomId: string;
+}
+
+interface ReactionData {
+  messageId: string;
+  emoji: string;
+  username: string;
+  roomId: string;
+}
+
+/**
+ * Simple in‑memory rate limiter: max 5 messages per 2 seconds per socket.
+ */
+const MESSAGE_LIMIT = 5;
+const MESSAGE_WINDOW_MS = 2_000;
+const messageTimestamps = new Map<string, number[]>();
+
+/**
+ * Helper to log with a timestamp prefix.
+ */
+function log(...args: unknown[]) {
+  console.log(`[${new Date().toISOString()}]`, ...args);
+}
+
+/**
+ * Validate that an object contains only string values.
+ */
+function isStringRecord(obj: any): obj is Record<string, string> {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    Object.values(obj).every((v) => typeof v === "string")
+  );
+}
+
+/**
+ * Main socket setup function.
+ */
 export function setupSocket(io: Server) {
   io.on("connection", (socket: Socket) => {
-    console.log(`🔌 Enterprise socket connected: ${socket.id}`);
+    log("🔌 Enterprise socket connected:", socket.id);
 
+    // -------------------------------------------------------------------------
     // User Session Initialization
-    socket.on("join", (data: { userId?: string; username: string; publicKey: string; room?: string; status?: string }) => {
-      const room = data.room || "general";
-      const status = (data.status as any) || "online";
+    // -------------------------------------------------------------------------
+    socket.on("join", (data: JoinData) => {
+      try {
+        const room = data.room || "general";
+        const status = (data.status as keyof typeof UserStatus) || UserStatus.ONLINE;
 
-      activeSockets.set(socket.id, {
-        userId: data.userId,
-        username: data.username,
-        publicKey: data.publicKey,
-        socketId: socket.id,
-        currentRoom: room,
-        status: status,
-      });
+        // Basic validation
+        if (!data.username || !data.publicKey) {
+          socket.emit("error", { message: "Invalid join payload" });
+          return;
+        }
 
-      socket.join(room);
+        const activeUser: ActiveUser = {
+          userId: data.userId,
+          username: data.username,
+          publicKey: data.publicKey,
+          socketId: socket.id,
+          currentRoom: room,
+          status,
+        };
 
-      console.log(`👤 ${data.username} connected (${socket.id}) -> room [${room}]`);
+        activeSockets.set(socket.id, activeUser);
+        socket.join(room);
 
-      // Notify others in room
-      socket.to(room).emit("user_joined", {
-        userId: data.userId,
-        username: data.username,
-        publicKey: data.publicKey,
-        socketId: socket.id,
-        status: status,
-        room: room,
-      });
+        log(`👤 ${data.username} connected (${socket.id}) -> room [${room}]`);
 
-      // Send active users list
-      const activeList = Array.from(activeSockets.values());
-      socket.emit("existing_users", activeList);
-      io.emit("presence_update", activeList);
+        // Notify others in the room
+        socket.to(room).emit("user_joined", {
+          userId: data.userId,
+          username: data.username,
+          publicKey: data.publicKey,
+          socketId: socket.id,
+          status,
+          room,
+        });
+
+        // Send active users list to the newly connected socket
+        const activeList = Array.from(activeSockets.values());
+        socket.emit("existing_users", activeList);
+        io.emit("presence_update", activeList);
+      } catch (err) {
+        log("Error handling join:", err);
+        socket.emit("error", { message: "Join failed" });
+      }
     });
 
+    // -------------------------------------------------------------------------
     // Room Switch Handler
+    // -------------------------------------------------------------------------
     socket.on("switch_room", (newRoom: string) => {
-      const user = activeSockets.get(socket.id);
-      if (user) {
+      try {
+        const user = activeSockets.get(socket.id);
+        if (!user) return;
+
         socket.leave(user.currentRoom);
         user.currentRoom = newRoom;
         socket.join(newRoom);
 
-        const roomUsers = Array.from(activeSockets.values()).filter(u => u.currentRoom === newRoom);
+        const roomUsers = Array.from(activeSockets.values()).filter(
+          (u) => u.currentRoom === newRoom
+        );
         socket.emit("existing_users", roomUsers);
 
         socket.to(newRoom).emit("user_joined", {
@@ -70,95 +176,144 @@ export function setupSocket(io: Server) {
           status: user.status,
           room: newRoom,
         });
-      }
-    });
 
-    // Presence Status Update (Online, Away, DND)
-    socket.on("update_status", (status: "online" | "away" | "dnd" | "offline") => {
-      const user = activeSockets.get(socket.id);
-      if (user) {
-        user.status = status;
-        io.emit("presence_update", Array.from(activeSockets.values()));
-      }
-    });
-
-    // Send Encrypted Message Payload
-    socket.on("send_message", (data: {
-      roomId: string;
-      senderId?: string;
-      author: string;
-      payloads: Record<string, string>;
-      mediaUrl?: string;
-      fileName?: string;
-      fileSize?: number;
-      time?: string;
-    }) => {
-      const msgId = "msg_" + Math.random().toString(36).substring(2, 12);
-      const roomId = data.roomId || "general";
-      const timeStr = data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      // Persist to SQLite
-      try {
-        const stmt = db.prepare(`
-          INSERT INTO messages (id, room_id, sender_id, sender_username, payloads, media_url, file_name, file_size)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        stmt.run(
-          msgId,
-          roomId,
-          data.senderId || "anon",
-          data.author,
-          JSON.stringify(data.payloads),
-          data.mediaUrl || null,
-          data.fileName || null,
-          data.fileSize || null
-        );
+        log(`🔀 ${user.username} switched to room ${newRoom}`);
       } catch (err) {
-        console.error("SQLite message insertion error:", err);
+        log("Error handling switch_room:", err);
+        socket.emit("error", { message: "Room switch failed" });
       }
-
-      const messageBroadcast = {
-        id: msgId,
-        roomId: roomId,
-        senderId: data.senderId,
-        author: data.author,
-        payloads: data.payloads,
-        mediaUrl: data.mediaUrl,
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-        time: timeStr,
-        isDeleted: false,
-      };
-
-      io.to(roomId).emit("receive_message", messageBroadcast);
     });
 
+    // -------------------------------------------------------------------------
+    // Presence Status Update (Online, Away, DND, Offline)
+    // -------------------------------------------------------------------------
+    socket.on("update_status", (status: keyof typeof UserStatus) => {
+      try {
+        const user = activeSockets.get(socket.id);
+        if (!user) return;
+
+        user.status = UserStatus[status.toUpperCase() as keyof typeof UserStatus];
+        io.emit("presence_update", Array.from(activeSockets.values()));
+        log(`🔔 ${user.username} set status to ${user.status}`);
+      } catch (err) {
+        log("Error handling update_status:", err);
+        socket.emit("error", { message: "Status update failed" });
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // Send Encrypted Message Payload
+    // -------------------------------------------------------------------------
+    socket.on("send_message", (data: SendMessageData) => {
+      try {
+        // Rate limiting
+        const now = Date.now();
+        const timestamps = messageTimestamps.get(socket.id) ?? [];
+        const recent = timestamps.filter((t) => now - t < MESSAGE_WINDOW_MS);
+        recent.push(now);
+        messageTimestamps.set(socket.id, recent);
+        if (recent.length > MESSAGE_LIMIT) {
+          socket.emit("error", { message: "Message rate limit exceeded" });
+          return;
+        }
+
+        // Basic payload validation
+        if (!data.author || !isStringRecord(data.payloads)) {
+          socket.emit("error", { message: "Invalid message payload" });
+          return;
+        }
+
+        const msgId = "msg_" + Math.random().toString(36).substring(2, 12);
+        const roomId = data.roomId || "general";
+        const timeStr =
+          data.time ||
+          new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+        // Persist to SQLite
+        try {
+          const stmt = db.prepare(`
+            INSERT INTO messages (id, room_id, sender_id, sender_username, payloads, media_url, file_name, file_size)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          stmt.run(
+            msgId,
+            roomId,
+            data.senderId || "anon",
+            data.author,
+            JSON.stringify(data.payloads),
+            data.mediaUrl || null,
+            data.fileName || null,
+            data.fileSize || null
+          );
+        } catch (dbErr) {
+          log("SQLite message insertion error:", dbErr);
+        }
+
+        const messageBroadcast = {
+          id: msgId,
+          roomId,
+          senderId: data.senderId,
+          author: data.author,
+          payloads: data.payloads,
+          mediaUrl: data.mediaUrl,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          time: timeStr,
+          isDeleted: false,
+        };
+
+        io.to(roomId).emit("receive_message", messageBroadcast);
+        log(`💬 Message ${msgId} sent to room ${roomId} by ${data.author}`);
+      } catch (err) {
+        log("Error handling send_message:", err);
+        socket.emit("error", { message: "Message send failed" });
+      }
+    });
+
+    // -------------------------------------------------------------------------
     // Message Deletion
-    socket.on("delete_message", (data: { messageId: string; roomId: string }) => {
+    // -------------------------------------------------------------------------
+    socket.on("delete_message", (data: DeleteMessageData) => {
       try {
         const stmt = db.prepare("UPDATE messages SET is_deleted = 1 WHERE id = ?");
         stmt.run(data.messageId);
         io.to(data.roomId).emit("message_deleted", { messageId: data.messageId });
+        log(`🗑️ Message ${data.messageId} deleted in room ${data.roomId}`);
       } catch (err) {
-        console.error("Failed deleting message:", err);
+        log("Failed deleting message:", err);
+        socket.emit("error", { message: "Message deletion failed" });
       }
     });
 
+    // -------------------------------------------------------------------------
     // Typing Indicators
-    socket.on("typing_start", (data: { username: string; roomId: string }) => {
-      socket.to(data.roomId).emit("user_typing", { username: data.username, roomId: data.roomId, isTyping: true });
+    // -------------------------------------------------------------------------
+    socket.on("typing_start", (data: TypingData) => {
+      socket.to(data.roomId).emit("user_typing", {
+        username: data.username,
+        roomId: data.roomId,
+        isTyping: true,
+      });
     });
 
-    socket.on("typing_stop", (data: { username: string; roomId: string }) => {
-      socket.to(data.roomId).emit("user_typing", { username: data.username, roomId: data.roomId, isTyping: false });
+    socket.on("typing_stop", (data: TypingData) => {
+      socket.to(data.roomId).emit("user_typing", {
+        username: data.username,
+        roomId: data.roomId,
+        isTyping: false,
+      });
     });
 
+    // -------------------------------------------------------------------------
     // Reactions
-    socket.on("add_reaction", (data: { messageId: string; emoji: string; username: string; roomId: string }) => {
+    // -------------------------------------------------------------------------
+    socket.on("add_reaction", (data: ReactionData) => {
       io.to(data.roomId).emit("message_reaction", data);
     });
 
-    // Disconnect
+    // -------------------------------------------------------------------------
+    // Disconnect handling
+    // -------------------------------------------------------------------------
     socket.on("disconnect", () => {
       const user = activeSockets.get(socket.id);
       if (user) {
@@ -169,7 +324,24 @@ export function setupSocket(io: Server) {
           userId: user.userId,
         });
         io.emit("presence_update", Array.from(activeSockets.values()));
+        log(`❌ Socket ${socket.id} (${user.username}) disconnected`);
+      } else {
+        log(`❌ Socket ${socket.id} disconnected (no user record)`);
       }
+      // Clean up rate‑limiter data
+      messageTimestamps.delete(socket.id);
+    });
+
+    // -------------------------------------------------------------------------
+    // Generic error handling for unexpected exceptions
+    // -------------------------------------------------------------------------
+    socket.on("error", (err) => {
+      log("Socket error:", err);
     });
   });
 }
+
+/**
+ * In‑memory map tracking active sockets and their associated user data.
+ */
+const activeSockets = new Map<string, ActiveUser>();
