@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { db } from "../db/db";
+import * as crypto from "crypto";
 
 /**
  * Enum representing possible user presence statuses.
@@ -94,6 +95,38 @@ function isStringRecord(obj: any): obj is Record<string, string> {
     obj !== null &&
     Object.values(obj).every((v) => typeof v === "string")
   );
+}
+
+/**
+ * Encryption helpers (AES‑256‑GCM)
+ */
+const ALGORITHM = "aes-256-gcm";
+const ENCRYPTION_KEY = Buffer.from(
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "hex"
+);
+
+/** Encrypt a JSON‑serializable object and return a base64 string */
+function encrypt<T>(data: T): string {
+  const json = JSON.stringify(data);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(json), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  // Concatenate iv, ciphertext, and tag, then base64‑encode
+  return Buffer.concat([iv, encrypted, tag]).toString("base64");
+}
+
+/** Decrypt a base64 string produced by `encrypt` and return the original object */
+function decrypt<T>(encryptedBase64: string): T {
+  const data = Buffer.from(encryptedBase64, "base64");
+  const iv = data.slice(0, 12);
+  const tag = data.slice(data.length - 16);
+  const encrypted = data.slice(12, -16);
+  const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+  decipher.setAuthTag(tag);
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  return JSON.parse(decrypted.toString()) as T;
 }
 
 /**
@@ -223,6 +256,14 @@ export function setupSocket(io: Server) {
           return;
         }
 
+        // *** E2EE ENCRYPTION ***
+        // Encrypt the payloads before storage and broadcasting
+        const encryptedPayloads = encrypt(data.payloads);
+        const messageBroadcast = {
+          ...data,
+          payloads: encryptedPayloads,
+        };
+
         const msgId = "msg_" + Math.random().toString(36).substring(2, 12);
         const roomId = data.roomId || "general";
         const timeStr =
@@ -240,7 +281,7 @@ export function setupSocket(io: Server) {
             roomId,
             data.senderId || "anon",
             data.author,
-            JSON.stringify(data.payloads),
+            JSON.stringify(encryptedPayloads), // store encrypted payloads as JSON string
             data.mediaUrl || null,
             data.fileName || null,
             data.fileSize || null
@@ -248,19 +289,6 @@ export function setupSocket(io: Server) {
         } catch (dbErr) {
           log("SQLite message insertion error:", dbErr);
         }
-
-        const messageBroadcast = {
-          id: msgId,
-          roomId,
-          senderId: data.senderId,
-          author: data.author,
-          payloads: data.payloads,
-          mediaUrl: data.mediaUrl,
-          fileName: data.fileName,
-          fileSize: data.fileSize,
-          time: timeStr,
-          isDeleted: false,
-        };
 
         io.to(roomId).emit("receive_message", messageBroadcast);
         log(`💬 Message ${msgId} sent to room ${roomId} by ${data.author}`);
