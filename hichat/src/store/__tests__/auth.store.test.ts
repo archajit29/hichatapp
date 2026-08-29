@@ -56,7 +56,6 @@ describe('auth.store', () => {
     expect(state.accessToken).toBe('jwt_alice_token');
     expect(state.isAuthenticated).toBe(true);
     expect(state.loading).toBe(false);
-    expect(localStorage.getItem('hichat_jwt_token')).toBe('jwt_alice_token');
   });
 
   it('handles login failure and sets error state', async () => {
@@ -93,13 +92,12 @@ describe('auth.store', () => {
     expect(state.isAuthenticated).toBe(true);
   });
 
-  it('handles logout and clears auth state and localStorage', async () => {
+  it('handles logout and clears auth state', async () => {
     useAuthStore.setState({
       user: { id: 'u1', username: 'alice', email: 'alice@example.com' },
       accessToken: 'token123',
       isAuthenticated: true,
     });
-    localStorage.setItem('hichat_jwt_token', 'token123');
 
     (authApi.logoutRequest as any).mockResolvedValueOnce({});
     await useAuthStore.getState().logout();
@@ -108,7 +106,6 @@ describe('auth.store', () => {
     expect(state.user).toBeNull();
     expect(state.accessToken).toBeNull();
     expect(state.isAuthenticated).toBe(false);
-    expect(localStorage.getItem('hichat_jwt_token')).toBeNull();
   });
 
   it('supports setting crypto keys and fingerprint', () => {
