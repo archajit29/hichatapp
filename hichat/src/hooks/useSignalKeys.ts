@@ -27,12 +27,10 @@ export interface UseSignalKeysReturn {
 }
 
 export function useSignalKeys(): UseSignalKeysReturn {
-  const {
-    cryptoKeys,
-    fingerprint,
-    setCryptoKeys,
-    setFingerprint,
-  } = useAuthStore();
+  const cryptoKeys = useAuthStore((state) => state.cryptoKeys);
+  const fingerprint = useAuthStore((state) => state.fingerprint);
+  const setCryptoKeys = useAuthStore((state) => state.setCryptoKeys);
+  const setFingerprint = useAuthStore((state) => state.setFingerprint);
 
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

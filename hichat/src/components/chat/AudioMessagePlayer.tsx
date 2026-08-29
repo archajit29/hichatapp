@@ -5,7 +5,9 @@ interface AudioMessagePlayerProps {
   audioUrl: string;
 }
 
-export function AudioMessagePlayer({ audioUrl }: AudioMessagePlayerProps) {
+const WAVEFORM_HEIGHTS = [40, 70, 90, 60, 100, 50, 80, 65, 45, 95, 75, 55, 85, 30] as const;
+
+export const AudioMessagePlayer = React.memo(function AudioMessagePlayer({ audioUrl }: AudioMessagePlayerProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [duration, setDuration] = useState<string>('0:00');
   const [progress, setProgress] = useState<number>(0);
@@ -62,7 +64,7 @@ export function AudioMessagePlayer({ audioUrl }: AudioMessagePlayerProps) {
 
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-0.5 h-4">
-          {[40, 70, 90, 60, 100, 50, 80, 65, 45, 95, 75, 55, 85, 30].map((h, i) => (
+          {WAVEFORM_HEIGHTS.map((h, i) => (
             <div
               key={i}
               className={`flex-1 rounded-full transition-all duration-150 ${
@@ -82,4 +84,4 @@ export function AudioMessagePlayer({ audioUrl }: AudioMessagePlayerProps) {
       </div>
     </div>
   );
-}
+});

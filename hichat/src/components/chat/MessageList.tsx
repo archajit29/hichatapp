@@ -23,7 +23,7 @@ interface MessageListProps {
   onQuickMessage: (text: string) => void;
 }
 
-export function MessageList({
+export const MessageList = React.memo(function MessageList({
   messages,
   currentUsername,
   pinnedMessages,
@@ -74,7 +74,7 @@ export function MessageList({
 
             return (
               <MessageBubble
-                key={msg.id || index}
+                key={msg.id || `msg-${index}`}
                 msg={msg}
                 isSentByMe={isSentByMe}
                 isPinned={isPinned}
@@ -95,4 +95,4 @@ export function MessageList({
       </div>
     </>
   );
-}
+});

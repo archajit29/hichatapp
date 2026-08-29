@@ -16,7 +16,7 @@ interface ChatHeaderProps {
   onToggleRightDrawer: () => void;
 }
 
-export function ChatHeader({
+export const ChatHeader = React.memo(function ChatHeader({
   activeTab,
   activeRoom,
   activeDMUser,
@@ -99,4 +99,4 @@ export function ChatHeader({
       </div>
     </header>
   );
-}
+});

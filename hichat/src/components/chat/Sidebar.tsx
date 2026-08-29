@@ -39,7 +39,7 @@ interface SidebarProps {
   onOpenKeyModal: () => void;
 }
 
-export function Sidebar({
+export const Sidebar = React.memo(function Sidebar({
   authUser,
   userStatus,
   statusDropdown,
@@ -268,4 +268,4 @@ export function Sidebar({
       </div>
     </aside>
   );
-}
+});

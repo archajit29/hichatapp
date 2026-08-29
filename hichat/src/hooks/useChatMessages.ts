@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Message, ActiveUser } from '../types/chat';
 import { User } from '../types/user';
-import { useChats } from './useChats';
-import { useUI } from './useUI';
+import { useChatStore } from '../store/chat.store';
+import { useUIStore } from '../store/ui.store';
 import { useEncryption } from './useEncryption';
 import { playMessageSound, playReactionSound } from '../soundUtils';
 import { socket } from '../api/socket';
@@ -30,8 +30,10 @@ export function useChatMessages({
   setUnreadCounts,
 }: UseChatMessagesProps) {
   const navigate = useNavigate();
-  const { messages, setMessages, fetchMessages } = useChats();
-  const { soundEnabled } = useUI();
+  const messages = useChatStore((state) => state.messages);
+  const setMessages = useChatStore((state) => state.setMessages);
+  const fetchMessages = useChatStore((state) => state.fetchMessages);
+  const soundEnabled = useUIStore((state) => state.soundEnabled);
   const {
     decryptMessage,
     decryptChatPayload,
@@ -324,13 +326,16 @@ export function useChatMessages({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const filteredMessages = messages.filter((msg) => {
-    if (!searchQuery) return true;
-    return (
-      (msg.message || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (msg.author || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery) return messages;
+    const query = searchQuery.toLowerCase();
+    return messages.filter((msg) => {
+      return (
+        (msg.message || '').toLowerCase().includes(query) ||
+        (msg.author || '').toLowerCase().includes(query)
+      );
+    });
+  }, [messages, searchQuery]);
 
   return {
     messages,

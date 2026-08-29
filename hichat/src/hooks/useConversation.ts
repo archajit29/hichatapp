@@ -1,21 +1,21 @@
 import { useState, useCallback } from 'react';
 import { User } from '../types/user';
 import { ActiveUser, UserStatusType } from '../types/chat';
-import { useChats } from './useChats';
-import { useUI } from './useUI';
+import { useChatStore } from '../store/chat.store';
+import { useUIStore } from '../store/ui.store';
 import { socket } from '../api/socket';
 
 export function useConversation(authUser: User | null) {
-  const {
-    conversations: rooms,
-    allUsers,
-    messages,
-    setConversations: setRooms,
-    selectConversation,
-    createRoom,
-  } = useChats();
+  const rooms = useChatStore((state) => state.conversations);
+  const allUsers = useChatStore((state) => state.allUsers);
+  const setRooms = useChatStore((state) => state.setConversations);
+  const selectConversation = useChatStore((state) => state.selectConversation);
+  const createRoom = useChatStore((state) => state.createRoom);
 
-  const { setIsSidebarOpen, openModal, closeModal, activeModal } = useUI();
+  const setIsSidebarOpen = useUIStore((state) => state.setIsSidebarOpen);
+  const openModal = useUIStore((state) => state.openModal);
+  const closeModal = useUIStore((state) => state.closeModal);
+  const activeModal = useUIStore((state) => state.activeModal);
 
   const [activeTab, setActiveTab] = useState<'channel' | 'dm'>('channel');
   const [activeRoom, setActiveRoom] = useState<string>('general');
@@ -69,7 +69,8 @@ export function useConversation(authUser: User | null) {
       setIsSidebarOpen(false);
       const dmRoom = [authUser?.username, userObj.username].sort().join('_dm_');
       setUnreadCounts((prev) => ({ ...prev, [dmRoom]: 0 }));
-      messages
+      const currentMessages = useChatStore.getState().messages;
+      currentMessages
         .filter((m) => m.author === userObj.username && m.status !== 'read')
         .forEach((m) => {
           if (socket.connected) {
@@ -77,7 +78,7 @@ export function useConversation(authUser: User | null) {
           }
         });
     },
-    [authUser?.username, messages, selectConversation, setIsSidebarOpen]
+    [authUser?.username, selectConversation, setIsSidebarOpen]
   );
 
   const handleCreateRoom = useCallback(

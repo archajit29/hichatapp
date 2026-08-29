@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Message } from '../../types/chat';
 import {
   Copy,
@@ -113,7 +113,7 @@ interface MessageBubbleProps {
   onOpenLightbox: (url: string) => void;
 }
 
-export function MessageBubble({
+export const MessageBubble = React.memo(function MessageBubble({
   msg,
   isSentByMe,
   isPinned,
@@ -127,6 +127,8 @@ export function MessageBubble({
   onToggleReactionPicker,
   onOpenLightbox,
 }: MessageBubbleProps) {
+  const formattedContent = useMemo(() => formatMessageContent(msg.message), [msg.message]);
+
   return (
     <div
       className={`flex gap-3 max-w-[85%] sm:max-w-[75%] group relative ${
@@ -171,7 +173,7 @@ export function MessageBubble({
             msg.isDeleted ? 'italic text-gray-500' : 'text-gray-100'
           }`}
         >
-          {formatMessageContent(msg.message)}
+          {formattedContent}
         </div>
 
         {/* Voice Note Attachment Player */}
@@ -334,4 +336,4 @@ export function MessageBubble({
       </div>
     </div>
   );
-}
+});

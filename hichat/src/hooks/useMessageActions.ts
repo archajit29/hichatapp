@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Message, ActiveUser, UserStatusType } from '../types/chat';
 import { User } from '../types/user';
-import { useChats } from './useChats';
-import { useUI } from './useUI';
+import { useChatStore } from '../store/chat.store';
+import { useUIStore } from '../store/ui.store';
 import { useEncryption } from './useEncryption';
 import { playSendSound, playReactionSound, playRecordStartSound } from '../soundUtils';
 import { socket } from '../api/socket';
@@ -34,8 +34,10 @@ export function useMessageActions({
   stopTyping,
   handleStatusChange,
 }: UseMessageActionsProps) {
-  const { setMessages, deleteMessage, clearMessages } = useChats();
-  const { soundEnabled } = useUI();
+  const setMessages = useChatStore((state) => state.setMessages);
+  const deleteMessage = useChatStore((state) => state.deleteMessage);
+  const clearMessages = useChatStore((state) => state.clearMessages);
+  const soundEnabled = useUIStore((state) => state.soundEnabled);
   const { encryptMessage, encryptForUsers } = useEncryption(cryptoKeys?.store);
 
   const [input, setInput] = useState<string>('');

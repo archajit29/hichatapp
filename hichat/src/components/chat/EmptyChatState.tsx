@@ -5,7 +5,7 @@ interface EmptyChatStateProps {
   onQuickMessage?: (text: string) => void;
 }
 
-export function EmptyChatState({ onQuickMessage }: EmptyChatStateProps) {
+export const EmptyChatState = React.memo(function EmptyChatState({ onQuickMessage }: EmptyChatStateProps) {
   return (
     <div className="text-center my-auto p-8 rounded-3xl bg-gray-900/40 border border-white/5 backdrop-blur-md max-w-sm mx-auto shadow-2xl">
       <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 mx-auto mb-3 shadow-lg shadow-purple-600/20">
@@ -26,4 +26,4 @@ export function EmptyChatState({ onQuickMessage }: EmptyChatStateProps) {
       </div>
     </div>
   );
-}
+});

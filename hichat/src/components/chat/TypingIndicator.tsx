@@ -4,7 +4,7 @@ interface TypingIndicatorProps {
   typingStatus: Set<string>;
 }
 
-export function TypingIndicator({ typingStatus }: TypingIndicatorProps) {
+export const TypingIndicator = React.memo(function TypingIndicator({ typingStatus }: TypingIndicatorProps) {
   if (typingStatus.size === 0) return null;
 
   return (
@@ -15,4 +15,4 @@ export function TypingIndicator({ typingStatus }: TypingIndicatorProps) {
       </span>
     </div>
   );
-}
+});

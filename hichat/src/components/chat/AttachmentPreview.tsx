@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FileText } from 'lucide-react';
 
 interface AttachmentPreviewProps {
@@ -6,7 +6,12 @@ interface AttachmentPreviewProps {
   onRemove: () => void;
 }
 
-export function AttachmentPreview({ file, onRemove }: AttachmentPreviewProps) {
+export const AttachmentPreview = React.memo(function AttachmentPreview({ file, onRemove }: AttachmentPreviewProps) {
+  const formattedSize = useMemo(() => {
+    if (!file?.size) return '';
+    return `(${(file.size / 1024).toFixed(1)} KB)`;
+  }, [file?.size]);
+
   if (!file) return null;
 
   return (
@@ -15,7 +20,7 @@ export function AttachmentPreview({ file, onRemove }: AttachmentPreviewProps) {
         <FileText size={16} className="text-purple-400" />
         <span>
           Attached: <strong className="text-white">{file.name}</strong>{' '}
-          {file.size ? `(${(file.size / 1024).toFixed(1)} KB)` : ''}
+          {formattedSize}
         </span>
       </div>
       <button
@@ -27,4 +32,4 @@ export function AttachmentPreview({ file, onRemove }: AttachmentPreviewProps) {
       </button>
     </div>
   );
-}
+});

@@ -53,7 +53,7 @@ export interface UseEncryptionReturn {
 }
 
 export function useEncryption(customStore?: SignalProtocolStore): UseEncryptionReturn {
-  const { cryptoKeys } = useAuthStore();
+  const cryptoKeys = useAuthStore((state) => state.cryptoKeys);
   const getStore = useCallback((): SignalProtocolStore | null => {
     return customStore || cryptoKeys?.store || null;
   }, [customStore, cryptoKeys?.store]);

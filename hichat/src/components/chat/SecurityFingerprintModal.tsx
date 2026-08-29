@@ -6,7 +6,7 @@ interface SecurityFingerprintModalProps {
   onClose: () => void;
 }
 
-export function SecurityFingerprintModal({ user, onClose }: SecurityFingerprintModalProps) {
+export const SecurityFingerprintModal = React.memo(function SecurityFingerprintModal({ user, onClose }: SecurityFingerprintModalProps) {
   if (!user) return null;
 
   return (
@@ -47,4 +47,4 @@ export function SecurityFingerprintModal({ user, onClose }: SecurityFingerprintM
       </div>
     </div>
   );
-}
+});

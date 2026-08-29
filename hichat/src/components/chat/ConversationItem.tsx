@@ -21,7 +21,7 @@ interface DMItemProps {
 
 type ConversationItemProps = ChannelItemProps | DMItemProps;
 
-export function ConversationItem(props: ConversationItemProps) {
+export const ConversationItem = React.memo(function ConversationItem(props: ConversationItemProps) {
   if (props.type === 'channel') {
     const { room, isCurrent, unread = 0, onClick } = props;
     return (
@@ -86,4 +86,4 @@ export function ConversationItem(props: ConversationItemProps) {
       </div>
     </div>
   );
-}
+});

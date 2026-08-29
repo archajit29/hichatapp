@@ -25,17 +25,17 @@ jobs:
       - name: Build and push Backend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: hichat-backend
+          ECR_REPOSITORY: hichat-server 
           IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./hichat-server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Build and push Frontend
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: hichat-frontend
-          IMAGE_TAG: latest
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./hichat-client
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+     #- name: Build and push Frontend
+      # env:
+       #   ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+       #   ECR_REPOSITORY: hichat-frontend
+       #   IMAGE_TAG: latest
+       # run: |
+       #   docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./hichatapp 
+       #   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
