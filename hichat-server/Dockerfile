@@ -42,6 +42,8 @@ COPY --from=dependencies /app/package.json ./package.json
 COPY src ./src
 COPY server.ts ./server.ts
 COPY tsconfig.json ./tsconfig.json
+COPY package.json ./package.json
+
 
 # Ensure non-root ownership for enhanced container security
 RUN chown -R bun:bun /app
