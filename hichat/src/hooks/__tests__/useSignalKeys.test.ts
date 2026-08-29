@@ -7,13 +7,13 @@ import * as cryptoService from '../../services/crypto.service';
 
 vi.mock('../../services/signal.service', () => ({
   loadOrGenerateUserKeys: vi.fn(),
-  initializeUserSignalKeys: vi.fn(),
-  syncKeyBundleWithBackend: vi.fn(),
+  initializeSignalKeys: vi.fn(),
+  syncSignalKeysIfNeeded: vi.fn(),
 }));
 
 vi.mock('../../services/crypto.service', () => ({
-  getKeyFingerprint: vi.fn(),
-  generateSafetyNumber: vi.fn(),
+  getPublicKeyFingerprint: vi.fn(),
+  computeSafetyNumber: vi.fn(),
 }));
 
 describe('useSignalKeys hook', () => {
@@ -29,12 +29,13 @@ describe('useSignalKeys hook', () => {
     const mockKeys = {
       store: {} as any,
       identityKeyPair: {} as any,
+      identityKey: 'local_id_key',
       registrationId: 12345,
       publicKeyJwk: { crv: 'P-256' },
     };
 
     (signalService.loadOrGenerateUserKeys as any).mockResolvedValueOnce(mockKeys);
-    (cryptoService.getKeyFingerprint as any).mockResolvedValueOnce('0xFA39C81');
+    (cryptoService.getPublicKeyFingerprint as any).mockResolvedValueOnce('0xFA39C81');
 
     const { result } = renderHook(() => useSignalKeys());
 
@@ -51,7 +52,7 @@ describe('useSignalKeys hook', () => {
 
   it('synchronizes key bundle with backend via ensureKeysUploaded', async () => {
     const mockStore: any = {};
-    (signalService.syncKeyBundleWithBackend as any).mockResolvedValueOnce(undefined);
+    (signalService.syncSignalKeysIfNeeded as any).mockResolvedValueOnce(undefined);
 
     const { result } = renderHook(() => useSignalKeys());
 
@@ -59,12 +60,18 @@ describe('useSignalKeys hook', () => {
       await result.current.ensureKeysUploaded('alice', mockStore, 1);
     });
 
-    expect(signalService.syncKeyBundleWithBackend).toHaveBeenCalledWith('alice', mockStore, 1);
+    expect(signalService.syncSignalKeysIfNeeded).toHaveBeenCalledWith('alice', mockStore, 1);
   });
 
   it('computes fingerprint and safety numbers via service wrappers', async () => {
-    (cryptoService.getKeyFingerprint as any).mockResolvedValueOnce('0xFP_TEST');
-    (cryptoService.generateSafetyNumber as any).mockResolvedValueOnce('1111-2222');
+    useAuthStore.setState({
+      cryptoKeys: {
+        identityKey: 'local_id_key',
+      } as any,
+    });
+
+    (cryptoService.getPublicKeyFingerprint as any).mockResolvedValueOnce('0xFP_TEST');
+    (cryptoService.computeSafetyNumber as any).mockResolvedValueOnce('1111-2222');
 
     const { result } = renderHook(() => useSignalKeys());
 

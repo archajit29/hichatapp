@@ -43,7 +43,7 @@ describe('Login Page', () => {
     expect(screen.getByText('Unlock Key Vault')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g. alex_developer')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('••••••••••••')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Authorize & Decrypt/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Authorize & Unlock Vault/i })).toBeInTheDocument();
   });
 
   it('toggles to registration mode and displays email field', () => {
@@ -73,7 +73,7 @@ describe('Login Page', () => {
 
     const usernameInput = screen.getByPlaceholderText('e.g. alex_developer');
     const passwordInput = screen.getByPlaceholderText('••••••••••••');
-    const submitBtn = screen.getByRole('button', { name: /Authorize & Decrypt/i });
+    const submitBtn = screen.getByRole('button', { name: /Authorize & Unlock Vault/i });
 
     fireEvent.change(usernameInput, { target: { value: 'alice' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });

@@ -25,7 +25,7 @@ describe('GoogleLoginPage Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText('Choose a Google Account')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
     expect(screen.getByText('Alex Chen')).toBeInTheDocument();
     expect(screen.getByText('Sarah Connor')).toBeInTheDocument();
     expect(screen.getByText('Marcus Vance')).toBeInTheDocument();
@@ -41,13 +41,13 @@ describe('GoogleLoginPage Component', () => {
     const useAnotherBtn = screen.getByRole('button', { name: /Use another Google account/i });
     fireEvent.click(useAnotherBtn);
 
-    expect(screen.getByText('Custom Google Profile')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Full Name (e.g. Jordan Miller)')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('name@gmail.com or @company.com')).toBeInTheDocument();
+    expect(screen.getByText('Enter Google Account Details')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. Jordan Miller')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('jordan.miller@gmail.com')).toBeInTheDocument();
 
-    const backBtn = screen.getByRole('button', { name: /Back to account selector/i });
+    const backBtn = screen.getByRole('button', { name: /Back to accounts/i });
     fireEvent.click(backBtn);
 
-    expect(screen.getByText('Choose a Google Account')).toBeInTheDocument();
+    expect(screen.getByText('Sign in with Google')).toBeInTheDocument();
   });
 });

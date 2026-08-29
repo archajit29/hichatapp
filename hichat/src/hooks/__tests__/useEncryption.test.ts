@@ -75,12 +75,14 @@ describe('useEncryption hook', () => {
     );
   });
 
-  it('delegates encryptForUsers to encryptMessageForRecipients', async () => {
-    const mockStore: any = {};
+  it('encrypts messages for multiple recipients via encryptForUsers', async () => {
+    const mockStore: any = {
+      loadSession: vi.fn().mockResolvedValue('active_session_record'),
+    };
     useAuthStore.setState({ cryptoKeys: { store: mockStore } as any });
 
-    const mockPayloads = { bob: { type: 3, body: 'cipher' } };
-    (signalService.encryptMessageForRecipients as any).mockResolvedValueOnce(mockPayloads);
+    const mockPayload = { type: 1, body: 'cipher_bob' } as any;
+    (signalService.encryptMessage as any).mockResolvedValue(mockPayload);
 
     const { result } = renderHook(() => useEncryption());
     const payloads = await result.current.encryptForUsers(
@@ -88,10 +90,10 @@ describe('useEncryption hook', () => {
       'hello team'
     );
 
-    expect(payloads).toEqual(mockPayloads);
-    expect(signalService.encryptMessageForRecipients).toHaveBeenCalledWith(
+    expect(payloads).toEqual({ bob: mockPayload });
+    expect(signalService.encryptMessage).toHaveBeenCalledWith(
       mockStore,
-      [{ username: 'bob', deviceId: 1 }],
+      'bob',
       'hello team',
       expect.anything()
     );

@@ -51,7 +51,7 @@ describe('Sidebar Component', () => {
     );
 
     expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText(/online/i)).toBeInTheDocument();
+    expect(screen.getByText(/● ONLINE/i)).toBeInTheDocument();
   });
 
   it('renders rooms list with unread count badges', () => {
