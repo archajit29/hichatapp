@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { ShieldCheck, LogOut, Key, User } from 'lucide-react';
 import { useAuthStore } from './store/auth.store';
 import ProtectedRoute from './routes/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy-loaded heavy page chunks for code splitting and instant initial bundle delivery
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -174,8 +175,10 @@ function MainLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <MainLayout />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <MainLayout />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
