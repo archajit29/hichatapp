@@ -3,9 +3,8 @@ import { Message, ActiveUser, UserStatusType } from '../types/chat';
 import { User } from '../types/user';
 import { useChats } from './useChats';
 import { useUI } from './useUI';
-import { encryptMessage } from '../cryptoUtils';
+import { useEncryption } from './useEncryption';
 import { playSendSound, playReactionSound, playRecordStartSound } from '../soundUtils';
-import { getKeyBundleRequest } from '../api/keys';
 import { socket } from '../api/socket';
 
 interface UseMessageActionsProps {
@@ -37,6 +36,7 @@ export function useMessageActions({
 }: UseMessageActionsProps) {
   const { setMessages, deleteMessage, clearMessages } = useChats();
   const { soundEnabled } = useUI();
+  const { encryptMessage, encryptForUsers } = useEncryption(cryptoKeys?.store);
 
   const [input, setInput] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<any>(null);
@@ -248,27 +248,12 @@ export function useMessageActions({
     }
 
     const textToSend = input.trim() || `[Attachment: ${selectedFile?.name || 'media'}]`;
-    const payloads: Record<string, any> = {};
 
     if (activeTab === 'dm' && activeDMUser) {
       const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-      let enc: any;
 
       try {
-        const session = await cryptoKeys.store.loadSession(activeDMUser.username + '.1');
-        if (!session) {
-          const bundleData = await getKeyBundleRequest(activeDMUser.username, 1);
-          if (bundleData && !bundleData.error) {
-            enc = await encryptMessage(cryptoKeys.store, activeDMUser.username, textToSend, {
-              preKeyBundle: bundleData,
-            });
-          } else {
-            console.error(`Could not fetch PreKey bundle for ${activeDMUser.username}:`, bundleData?.error);
-            return;
-          }
-        } else {
-          enc = await encryptMessage(cryptoKeys.store, activeDMUser.username, textToSend);
-        }
+        const enc = await encryptMessage(activeDMUser.username, textToSend);
 
         if (enc) {
           const localMsg: Message = {
@@ -317,6 +302,7 @@ export function useMessageActions({
       return;
     }
 
+    // Channel / Multi-Recipient Message
     const targetUsers = new Map<string, { socketId?: string; userId?: string; username: string }>();
     for (const u of allUsers) {
       if (u.username !== authUser.username) {
@@ -337,36 +323,7 @@ export function useMessageActions({
       }
     }
 
-    for (const targetUser of targetUsers.values()) {
-      try {
-        let enc: any;
-        const session = await cryptoKeys.store.loadSession(targetUser.username + '.1');
-        if (!session) {
-          const bundleData = await getKeyBundleRequest(targetUser.username, 1);
-          if (bundleData && !bundleData.error) {
-            enc = await encryptMessage(cryptoKeys.store, targetUser.username, textToSend, {
-              preKeyBundle: bundleData,
-            });
-          } else {
-            console.warn(`Could not fetch PreKey bundle for ${targetUser.username}:`, bundleData?.error);
-            continue;
-          }
-        } else {
-          enc = await encryptMessage(cryptoKeys.store, targetUser.username, textToSend);
-        }
-
-        if (enc) {
-          if (targetUser.username) payloads[targetUser.username] = enc;
-          if (targetUser.socketId) payloads[targetUser.socketId] = enc;
-          if (targetUser.userId) {
-            payloads[targetUser.userId] = enc;
-            payloads[String(targetUser.userId)] = enc;
-          }
-        }
-      } catch (err) {
-        console.error(`Encryption error for ${targetUser.username}:`, err);
-      }
-    }
+    const payloads = await encryptForUsers(Array.from(targetUsers.values()), textToSend);
 
     const messageData: any = {
       roomId: currentRoomId,

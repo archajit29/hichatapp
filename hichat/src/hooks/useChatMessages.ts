@@ -4,7 +4,7 @@ import { Message, ActiveUser } from '../types/chat';
 import { User } from '../types/user';
 import { useChats } from './useChats';
 import { useUI } from './useUI';
-import { decryptMessage, importPublicKey } from '../cryptoUtils';
+import { useEncryption } from './useEncryption';
 import { playMessageSound, playReactionSound } from '../soundUtils';
 import { socket } from '../api/socket';
 
@@ -32,6 +32,11 @@ export function useChatMessages({
   const navigate = useNavigate();
   const { messages, setMessages, fetchMessages } = useChats();
   const { soundEnabled } = useUI();
+  const {
+    decryptMessage,
+    decryptChatPayload,
+    importPublicKey,
+  } = useEncryption(cryptoKeys?.store);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -44,46 +49,12 @@ export function useChatMessages({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Decrypt Message Payload using Signal Protocol Double Ratchet
+  // Decrypt Message Payload using Signal Protocol Double Ratchet via useEncryption hook
   const processDecryption = useCallback(
     async (msgData: Message, keys: any): Promise<Message> => {
-      if (msgData.isDeleted) {
-        return { ...msgData, message: '[This message was deleted]', isDeleted: true };
-      }
-
-      try {
-        const payloads = msgData.payloads || {};
-        const targetCiphertext =
-          (authUser?.username && payloads[authUser.username]) ||
-          (socket?.id && payloads[socket.id]) ||
-          (authUser?.id && payloads[authUser.id]) ||
-          (authUser?.id && payloads[String(authUser.id)]) ||
-          payloads['all'];
-
-        if (msgData.author === authUser?.username) {
-          return { ...msgData, isEncrypted: true, isDecrypted: true };
-        }
-
-        if (!targetCiphertext) {
-          if (msgData.message) return { ...msgData, isEncrypted: true };
-          return { ...msgData, message: '[Encrypted Message]', isEncrypted: true };
-        }
-
-        if (keys?.store && msgData.author) {
-          const text = await decryptMessage(keys.store, msgData.author, targetCiphertext);
-          return { ...msgData, message: text, isEncrypted: true, isDecrypted: true };
-        } else if (msgData.message) {
-          return { ...msgData, isEncrypted: true };
-        } else {
-          return { ...msgData, message: '[Encrypted Message]', isEncrypted: true };
-        }
-      } catch (_err) {
-        console.warn('Decryption error for message from ' + msgData.author + ':', _err);
-        if (msgData.message) return { ...msgData, isEncrypted: true };
-        return { ...msgData, message: '[Encrypted Message]', isEncrypted: true };
-      }
+      return decryptChatPayload(msgData, authUser, keys?.store);
     },
-    [authUser]
+    [authUser, decryptChatPayload]
   );
 
   // Fetch History Messages on Room/DM Switch
@@ -156,9 +127,9 @@ export function useChatMessages({
           if (cryptoKeys?.store) {
             try {
               const text = await decryptMessage(
-                cryptoKeys.store,
                 data.senderUsername,
-                data.ciphertext
+                data.ciphertext,
+                { store: cryptoKeys.store }
               );
               const dmRoomId = [authUser?.username, data.senderUsername].sort().join('_dm_');
 
@@ -342,6 +313,8 @@ export function useChatMessages({
     activeTab,
     navigate,
     processDecryption,
+    decryptMessage,
+    importPublicKey,
     setMessages,
     setActiveUsersMap,
     setUnreadCounts,

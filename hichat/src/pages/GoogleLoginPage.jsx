@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Lock, ArrowRight, UserPlus, Sparkles, Check, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
-import { loadOrGenerateUserKeys } from '../cryptoUtils';
+import { useSignalKeys } from '../hooks/useSignalKeys';
 
 export function GoogleLogo({ size = 20, className = "" }) {
   return (
@@ -62,6 +62,7 @@ export default function GoogleLoginPage() {
   const [authStep, setAuthStep] = useState(''); // text message during login
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  const { loadOrGenerateKeys } = useSignalKeys();
 
   const handleExecuteGoogleLogin = async (profile) => {
     setLoading(true);
@@ -72,7 +73,7 @@ export default function GoogleLoginPage() {
       // Step 1: Generate or retrieve local ECDH crypto keys for zero-knowledge encryption
       const username = profile.name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
       setAuthStep('Generating 256-bit Web Crypto ECDH keypair...');
-      const keys = await loadOrGenerateUserKeys(username);
+      const keys = await loadOrGenerateKeys(username);
 
       setAuthStep('Authorizing session token with HiChat server...');
       const SERVER_URL = 'http://localhost:8080';

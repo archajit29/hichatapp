@@ -8,3 +8,32 @@
 
 .aider.input.history
 desktop
+# IDE
+.vscode/
+.idea/
+.fleet/
+
+# AI tooling
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Temporary tests at repository root
+test_*.js
+verify_*.js
+debug_*.js
+scratch*.js

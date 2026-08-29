@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Key, ShieldCheck, User, Mail, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
-import { initializeSignalKeys } from '../api/signal';
+import { useSignalKeys } from '../hooks/useSignalKeys';
 
 export default function Login() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -12,6 +12,7 @@ export default function Login() {
   
   const navigate = useNavigate();
   const { login, register, loading, error, clearError, isAuthenticated } = useAuthStore();
+  const { initializeAndUploadKeys } = useSignalKeys();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -25,9 +26,9 @@ export default function Login() {
     try {
       if (isRegisterMode) {
         await register({ username, email, password });
-        // After successful registration, initialize signal keys
+        // After successful registration, initialize signal keys via hook
         try {
-          await initializeSignalKeys(username);
+          await initializeAndUploadKeys(username);
         } catch (keyErr) {
           console.error('Signal key initialization failed, but user was registered', keyErr);
         }

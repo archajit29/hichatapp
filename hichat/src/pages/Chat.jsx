@@ -6,13 +6,8 @@ import { useConversation } from '../hooks/useConversation';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useTypingIndicator } from '../hooks/useTypingIndicator';
 import { useMessageActions } from '../hooks/useMessageActions';
+import { useSignalKeys } from '../hooks/useSignalKeys';
 import { ChatLayout } from '../components/chat/ChatLayout';
-import {
-  loadOrGenerateUserKeys,
-  getPublicKeyFingerprint,
-  generateSignalPreKeyBundle,
-} from '../cryptoUtils';
-import { getKeyCountRequest, uploadKeysRequest } from '../api/keys';
 import { socket } from '../api/socket';
 import '../App.css';
 
@@ -23,11 +18,15 @@ export default function Chat() {
   const {
     user: authUser,
     cryptoKeys,
-    setCryptoKeys,
     fingerprint: myFingerprint,
-    setFingerprint: setMyFingerprint,
     setUser,
   } = useAuth();
+
+  const {
+    loadOrGenerateKeys,
+    ensureKeysUploaded,
+    getFingerprint,
+  } = useSignalKeys();
 
   const {
     sidebarOpen: isSidebarOpen,
@@ -133,47 +132,19 @@ export default function Chat() {
     handleStatusChange,
   });
 
-  // 6. Initialize Signal Protocol Vault
+  // 6. Initialize Signal Protocol Vault via useSignalKeys hook
   const initCryptoForUser = useCallback(
     async (userObj, token) => {
       try {
         const username = typeof userObj === 'string' ? userObj : userObj.username;
         const userId = typeof userObj === 'object' ? userObj.id : authUser?.id;
-        const keys = await loadOrGenerateUserKeys(username);
-        setCryptoKeys(keys);
-        const print = await getPublicKeyFingerprint(keys.publicKeyJwk);
-        setMyFingerprint(print);
+        const keys = await loadOrGenerateKeys(username);
 
         if (token) {
-          try {
-            let needsUpload = false;
-            try {
-              const countData = await getKeyCountRequest(username, 1);
-              if (!countData || countData.remainingPreKeys === 0) {
-                needsUpload = true;
-              }
-            } catch {
-              needsUpload = true;
-            }
-
-            if (needsUpload) {
-              const bundle = await generateSignalPreKeyBundle(keys.store, 1, 1, 20);
-              await uploadKeysRequest({
-                registrationId: bundle.registrationId,
-                identityKey: bundle.identityKey,
-                signedPreKey: bundle.signedPreKey,
-                oneTimePreKeys: bundle.oneTimePreKeys,
-                deviceId: 1,
-              });
-            }
-          } catch (keySyncErr) {
-            console.warn('Key bundle sync warning:', keySyncErr);
-          }
-        }
-
-        if (token) {
+          await ensureKeysUploaded(username, keys.store, 1);
           socket.auth = { token };
         }
+
         socket.connect();
         socket.emit('join', {
           userId: userId,
@@ -186,7 +157,7 @@ export default function Chat() {
         console.error('Failed initializing crypto:', _err);
       }
     },
-    [activeRoom, authUser, setCryptoKeys, setMyFingerprint, userStatus]
+    [activeRoom, authUser, loadOrGenerateKeys, ensureKeysUploaded, userStatus]
   );
 
   // 7. Restore User Session
@@ -229,7 +200,7 @@ export default function Chat() {
   };
 
   const handleVerifyUser = async (u) => {
-    const print = await getPublicKeyFingerprint(u.rawPublicKey);
+    const print = await getFingerprint(u.rawPublicKey);
     setKeyModalUser({ username: u.username, fingerprint: print });
   };
 
