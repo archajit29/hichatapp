@@ -11,7 +11,12 @@ export default function Login() {
   const [password, setPassword] = useState('');
   
   const navigate = useNavigate();
-  const { login, register, loading, error, clearError, isAuthenticated } = useAuthStore();
+  const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
+  const loading = useAuthStore((state) => state.loading);
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { initializeAndUploadKeys } = useSignalKeys();
 
   useEffect(() => {

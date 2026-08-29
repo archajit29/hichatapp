@@ -1,7 +1,8 @@
 import { useUIStore } from '../store/ui.store';
 
 export const useTheme = () => {
-  const { theme, toggleTheme } = useUIStore();
+  const theme = useUIStore((state) => state.theme);
+  const toggleTheme = useUIStore((state) => state.toggleTheme);
 
   return {
     theme,

@@ -20,7 +20,7 @@ interface MessageInputProps {
   placeholder: string;
 }
 
-export function MessageInput({
+export const MessageInput = React.memo(function MessageInput({
   input,
   onInputChange,
   onSubmit,
@@ -133,4 +133,4 @@ export function MessageInput({
       </div>
     </>
   );
-}
+});

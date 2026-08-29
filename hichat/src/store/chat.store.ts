@@ -261,3 +261,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setLoading: (loading: boolean) => set({ loading }),
   setError: (error: string | null) => set({ error }),
 }));
+
+// Granular selector functions to optimize component subscriptions and avoid re-renders
+export const selectConversations = (state: ChatState) => state.conversations;
+export const selectMessages = (state: ChatState) => state.messages;
+export const selectAllUsers = (state: ChatState) => state.allUsers;
+export const selectSelectedConversation = (state: ChatState) => state.selectedConversation;
+export const selectOnlineUsers = (state: ChatState) => state.onlineUsers;
+export const selectTypingUsers = (state: ChatState) => state.typingUsers;
+export const selectChatLoading = (state: ChatState) => state.loading;
+export const selectChatError = (state: ChatState) => state.error;
+

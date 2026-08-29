@@ -43,3 +43,12 @@ export const useUIStore = create<UIState>((set) => ({
     notificationQueue: state.notificationQueue.filter((n) => n.id !== id) 
   })),
 }));
+
+// Granular selector functions for UI state
+export const selectTheme = (state: UIState) => state.theme;
+export const selectSidebarOpen = (state: UIState) => state.sidebarOpen;
+export const selectRightDrawerOpen = (state: UIState) => state.rightDrawerOpen;
+export const selectSoundEnabled = (state: UIState) => state.soundEnabled;
+export const selectActiveModal = (state: UIState) => state.activeModal;
+export const selectNotificationQueue = (state: UIState) => state.notificationQueue;
+

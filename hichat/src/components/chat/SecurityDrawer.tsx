@@ -15,7 +15,7 @@ interface SecurityDrawerProps {
   onOpenCommandsHelp: () => void;
 }
 
-export function SecurityDrawer({
+export const SecurityDrawer = React.memo(function SecurityDrawer({
   isOpen,
   onClose,
   activeTab,
@@ -120,4 +120,4 @@ export function SecurityDrawer({
       </div>
     </aside>
   );
-}
+});

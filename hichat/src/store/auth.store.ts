@@ -154,3 +154,12 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Granular selector functions for auth state
+export const selectAuthUser = (state: AuthState) => state.user;
+export const selectIsAuthenticated = (state: AuthState) => state.isAuthenticated;
+export const selectAuthLoading = (state: AuthState) => state.loading;
+export const selectAuthError = (state: AuthState) => state.error;
+export const selectCryptoKeys = (state: AuthState) => state.cryptoKeys;
+export const selectFingerprint = (state: AuthState) => state.fingerprint;
+

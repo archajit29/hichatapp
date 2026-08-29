@@ -9,7 +9,7 @@ interface CreateRoomModalProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
-export function CreateRoomModal({
+export const CreateRoomModal = React.memo(function CreateRoomModal({
   isOpen,
   onClose,
   roomData,
@@ -76,4 +76,4 @@ export function CreateRoomModal({
       </div>
     </div>
   );
-}
+});

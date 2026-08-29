@@ -48,7 +48,7 @@ interface ChatWindowProps {
   onCancelRecording: () => void;
 }
 
-export function ChatWindow({
+export const ChatWindow = React.memo(function ChatWindow({
   activeTab,
   activeRoom,
   activeDMUser,
@@ -149,4 +149,4 @@ export function ChatWindow({
       />
     </main>
   );
-}
+});

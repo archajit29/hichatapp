@@ -16,7 +16,7 @@ import { useAuthStore } from '../store/auth.store';
 import { fetchStatsRequest } from '../api/chat';
 
 export default function HomePage({ session }) {
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [stats, setStats] = useState({
     usersCount: 142,
     roomsCount: 8,

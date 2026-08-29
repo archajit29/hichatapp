@@ -6,7 +6,7 @@ interface SlashCommandsModalProps {
   onClose: () => void;
 }
 
-export function SlashCommandsModal({ isOpen, onClose }: SlashCommandsModalProps) {
+export const SlashCommandsModal = React.memo(function SlashCommandsModal({ isOpen, onClose }: SlashCommandsModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -63,4 +63,4 @@ export function SlashCommandsModal({ isOpen, onClose }: SlashCommandsModalProps)
       </div>
     </div>
   );
-}
+});

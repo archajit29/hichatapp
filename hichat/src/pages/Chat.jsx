@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUI } from '../hooks/useUI';
@@ -180,29 +180,60 @@ export default function Chat() {
   }, [initCryptoForUser, navigate, setUser]);
 
   // 8. Sign Out
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('hichat_jwt_token');
     localStorage.removeItem('hichat_refresh_token');
     localStorage.removeItem('hichat_user');
     socket.disconnect();
     navigate('/login');
-  };
+  }, [navigate]);
 
   // 9. Input change handler bridging typing activity
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     setInput(e.target.value);
     handleTypingActivity();
-  };
+  }, [setInput, handleTypingActivity]);
 
   // 10. Quick sample message
-  const handleQuickMessage = (text) => {
+  const handleQuickMessage = useCallback((text) => {
     setInput(text);
-  };
+  }, [setInput]);
 
-  const handleVerifyUser = async (u) => {
+  const handleVerifyUser = useCallback(async (u) => {
     const print = await getFingerprint(u.rawPublicKey);
     setKeyModalUser({ username: u.username, fingerprint: print });
-  };
+  }, [getFingerprint, setKeyModalUser]);
+
+  // Stable event handlers for subcomponents
+  const handleCloseSidebar = useCallback(() => setIsSidebarOpen(false), [setIsSidebarOpen]);
+  const handleOpenSidebar = useCallback(() => setIsSidebarOpen(true), [setIsSidebarOpen]);
+  const handleToggleSound = useCallback(() => setSoundEnabled(!soundEnabled), [setSoundEnabled, soundEnabled]);
+  const handleToggleStatusDropdown = useCallback(() => setStatusDropdown((prev) => !prev), [setStatusDropdown]);
+  const handleTogglePinnedBanner = useCallback(() => setShowPinnedBanner((prev) => !prev), [setShowPinnedBanner]);
+  const handleClosePinnedBanner = useCallback(() => setShowPinnedBanner(false), [setShowPinnedBanner]);
+  const handleToggleRightDrawer = useCallback(() => setIsRightDrawerOpen((prev) => !prev), [setIsRightDrawerOpen]);
+  const handleCloseRightDrawer = useCallback(() => setIsRightDrawerOpen(false), [setIsRightDrawerOpen]);
+  const handleToggleReactionPicker = useCallback((id) => {
+    setActiveReactionPickerId((prev) => (prev === id ? null : id));
+  }, [setActiveReactionPickerId]);
+  const handleCloseLightbox = useCallback(() => setLightboxImage(null), [setLightboxImage]);
+  const handleCancelReply = useCallback(() => setReplyingTo(null), [setReplyingTo]);
+  const handleRemoveFile = useCallback(() => {
+    setSelectedFile(null);
+    setEncryptedFilePayload(null);
+  }, [setSelectedFile, setEncryptedFilePayload]);
+  const handleCloseCreateRoomModal = useCallback(() => setCreateRoomModal(false), [setCreateRoomModal]);
+  const handleOpenCreateRoomModal = useCallback(() => setCreateRoomModal(true), [setCreateRoomModal]);
+  const handleCloseKeyModal = useCallback(() => setKeyModalUser(null), [setKeyModalUser]);
+  const handleOpenKeyModal = useCallback(() => {
+    if (authUser?.username) {
+      setKeyModalUser({ username: authUser.username, fingerprint: myFingerprint });
+    }
+  }, [authUser, myFingerprint, setKeyModalUser]);
+  const handleCloseCommandsHelp = useCallback(() => setShowCommandsHelp(false), [setShowCommandsHelp]);
+  const handleOpenCommandsHelp = useCallback(() => setShowCommandsHelp(true), [setShowCommandsHelp]);
+
+  const activeRoomObj = useMemo(() => rooms.find((r) => r.id === activeRoom), [rooms, activeRoom]);
 
   if (!authUser) {
     return (
@@ -215,21 +246,19 @@ export default function Chat() {
     );
   }
 
-  const activeRoomObj = rooms.find((r) => r.id === activeRoom);
-
   return (
     <ChatLayout
       authUser={authUser}
       myFingerprint={myFingerprint}
       isSidebarOpen={isSidebarOpen}
-      onCloseSidebar={() => setIsSidebarOpen(false)}
-      onOpenSidebar={() => setIsSidebarOpen(true)}
+      onCloseSidebar={handleCloseSidebar}
+      onOpenSidebar={handleOpenSidebar}
       soundEnabled={soundEnabled}
-      onToggleSound={() => setSoundEnabled(!soundEnabled)}
+      onToggleSound={handleToggleSound}
       onLogout={handleLogout}
       userStatus={userStatus}
       statusDropdown={statusDropdown}
-      onToggleStatusDropdown={() => setStatusDropdown(!statusDropdown)}
+      onToggleStatusDropdown={handleToggleStatusDropdown}
       onStatusChange={handleStatusChange}
       rooms={rooms}
       activeTab={activeTab}
@@ -245,11 +274,11 @@ export default function Chat() {
       onSearchChange={setSearchQuery}
       pinnedMessages={pinnedMessages}
       showPinnedBanner={showPinnedBanner}
-      onTogglePinnedBanner={() => setShowPinnedBanner(!showPinnedBanner)}
-      onClosePinnedBanner={() => setShowPinnedBanner(false)}
+      onTogglePinnedBanner={handleTogglePinnedBanner}
+      onClosePinnedBanner={handleClosePinnedBanner}
       isRightDrawerOpen={isRightDrawerOpen}
-      onToggleRightDrawer={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
-      onCloseRightDrawer={() => setIsRightDrawerOpen(false)}
+      onToggleRightDrawer={handleToggleRightDrawer}
+      onCloseRightDrawer={handleCloseRightDrawer}
       filteredMessages={filteredMessages}
       copiedMessageId={copiedMessageId}
       activeReactionPickerId={activeReactionPickerId}
@@ -259,11 +288,9 @@ export default function Chat() {
       onCopyCiphertext={handleCopyCiphertext}
       onDelete={handleDeleteMessage}
       onAddReaction={handleAddReaction}
-      onToggleReactionPicker={(id) =>
-        setActiveReactionPickerId(activeReactionPickerId === id ? null : id)
-      }
+      onToggleReactionPicker={handleToggleReactionPicker}
       onOpenLightbox={setLightboxImage}
-      onCloseLightbox={() => setLightboxImage(null)}
+      onCloseLightbox={handleCloseLightbox}
       lightboxImage={lightboxImage}
       onQuickMessage={handleQuickMessage}
       typingStatus={typingStatus}
@@ -271,12 +298,9 @@ export default function Chat() {
       onInputChange={handleInputChange}
       onSubmitMessage={handleSendMessage}
       replyingTo={replyingTo}
-      onCancelReply={() => setReplyingTo(null)}
+      onCancelReply={handleCancelReply}
       selectedFile={selectedFile}
-      onRemoveFile={() => {
-        setSelectedFile(null);
-        setEncryptedFilePayload(null);
-      }}
+      onRemoveFile={handleRemoveFile}
       onFileSelect={handleFileSelection}
       isRecording={isRecording}
       recordingDuration={recordingDuration}
@@ -284,20 +308,18 @@ export default function Chat() {
       onStopRecording={stopRecording}
       onCancelRecording={cancelRecording}
       createRoomModal={createRoomModal}
-      onCloseCreateRoomModal={() => setCreateRoomModal(false)}
-      onOpenCreateRoomModal={() => setCreateRoomModal(true)}
+      onCloseCreateRoomModal={handleCloseCreateRoomModal}
+      onOpenCreateRoomModal={handleOpenCreateRoomModal}
       newRoomData={newRoomData}
       onNewRoomDataChange={setNewRoomData}
       onCreateRoomSubmit={handleCreateRoom}
       keyModalUser={keyModalUser}
-      onCloseKeyModal={() => setKeyModalUser(null)}
-      onOpenKeyModal={() =>
-        setKeyModalUser({ username: authUser.username, fingerprint: myFingerprint })
-      }
+      onCloseKeyModal={handleCloseKeyModal}
+      onOpenKeyModal={handleOpenKeyModal}
       onVerifyUser={handleVerifyUser}
       showCommandsHelp={showCommandsHelp}
-      onCloseCommandsHelp={() => setShowCommandsHelp(false)}
-      onOpenCommandsHelp={() => setShowCommandsHelp(true)}
+      onCloseCommandsHelp={handleCloseCommandsHelp}
+      onOpenCommandsHelp={handleOpenCommandsHelp}
     />
   );
 }

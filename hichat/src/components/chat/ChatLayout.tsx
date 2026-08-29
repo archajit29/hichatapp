@@ -84,7 +84,7 @@ interface ChatLayoutProps {
   onOpenCommandsHelp: () => void;
 }
 
-export function ChatLayout({
+export const ChatLayout = React.memo(function ChatLayout({
   authUser,
   myFingerprint,
   isSidebarOpen,
@@ -261,4 +261,4 @@ export function ChatLayout({
       <ImageLightboxModal imageUrl={lightboxImage} onClose={onCloseLightbox} />
     </div>
   );
-}
+});
