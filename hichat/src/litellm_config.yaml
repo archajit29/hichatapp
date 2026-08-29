@@ -1,0 +1,5 @@
+model_list:
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: anthropic/claude-3-5-sonnet-20241022
+      api_key: AQ.Ab8RN6J8L-pQbSAE79l_HD2pJ416F289dPC0AYcaWMkUc9xCYA

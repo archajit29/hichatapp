@@ -1,0 +1,73 @@
+{
+  "family": "hichat-server-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/hichat-ecs-task-execution-role",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/hichat-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "hichat-server",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/hichat-server:latest",
+      "essential": true,
+      "stopTimeout": 30,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "3000" },
+        { "name": "HOST", "value": "0.0.0.0" },
+        { "name": "TRUST_PROXY", "value": "true" },
+        { "name": "CORS_ORIGIN", "value": "https://chat.hichat.app" },
+        { "name": "LOG_LEVEL", "value": "info" },
+        { "name": "DB_MAX_CONNECTIONS", "value": "20" },
+        { "name": "DB_IDLE_TIMEOUT_MS", "value": "30000" },
+        { "name": "DB_CONNECTION_TIMEOUT_MS", "value": "10000" },
+        { "name": "MAILBOX_RETRY_INTERVAL_MS", "value": "5000" },
+        { "name": "MAILBOX_MAX_RETRIES", "value": "5" },
+        { "name": "MAILBOX_RETRY_DELAYS", "value": "0,5000,15000,30000,60000" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:hichat/production/database-url"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:hichat/production/redis-url"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:hichat/production/jwt-secret"
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:3000/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/hichat-server",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

@@ -1,153 +1,22 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* HiChat Global App Styles */
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background-color: #070913;
 }
 
-.join-container {
+.chat-main {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 80vh;
+  height: 100%;
+  overflow: hidden;
 }
 
-.join-container input {
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  margin-right: 10px;
-  font-size: 1rem;
-}
-
-.join-container button {
-  padding: 12px 24px;
-  border-radius: 8px;
-  background-color: #646cff;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-.chat-app {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  height: 85vh;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-header {
-  padding: 15px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
-  border-radius: 12px 12px 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-header h2 { margin: 0; font-size: 1.5rem; color: #646cff; }
-header p { margin: 0; font-size: 0.9rem; }
-
-.messages-container {
+.chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  background: #fff;
-}
-
-.message {
-  display: flex;
-  flex-direction: column;
-}
-
-.message.sent { align-items: flex-end; }
-.message.received { align-items: flex-start; }
-
-.message-content {
-  max-width: 75%;
-  padding: 10px 15px;
-  border-radius: 15px;
-  position: relative;
-  text-align: left;
-}
-
-.sent .message-content {
-  background-color: #646cff;
-  color: white;
-  border-bottom-right-radius: 2px;
-}
-
-.received .message-content {
-  background-color: #e9ecef;
-  color: #333;
-  border-bottom-left-radius: 2px;
-}
-
-.author {
-  font-size: 0.75rem;
-  font-weight: bold;
-  margin-bottom: 4px;
-  display: block;
-}
-
-.message-content p {
-  margin: 0;
-  line-height: 1.4;
-}
-
-.time {
-  font-size: 0.65rem;
-  margin-top: 5px;
-  display: block;
-  opacity: 0.7;
-}
-
-.input-area {
-  padding: 15px;
-  border-top: 1px solid #eee;
-  display: flex;
-  gap: 10px;
-}
-
-.input-area input {
-  flex: 1;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  outline: none;
-}
-
-.input-area button {
-  padding: 12px 24px;
-  background: #646cff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.input-area button:hover {
-  background: #535bf2;
-}
-
-/* For encryption indicator */
-.encrypted-badge {
-  font-size: 0.6rem;
-  background: #4caf50;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-left: 5px;
-  vertical-align: middle;
+  min-height: 0; /* Critical for flex child scroll containers */
+  scroll-behavior: smooth;
 }

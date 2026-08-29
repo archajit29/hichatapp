@@ -1,50 +1,33 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>hichat</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Identity Services (for Google login) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <style>
-    /* Custom dark mode gradient */
-    .hero {
-      @apply bg-gradient-to-r from-gray-900 to-gray-800 text-white;
-    }
-    .card {
-      @apply bg-white/90 border border-gray-200 rounded-xl shadow-lg p-6;
-    }
-  </style>
-</head>
-<body class="bg-black text-white min-h-screen flex flex-col">
-  <header class="bg-gradient-to-r from-indigo-800 to-purple-800 text-white p-6">
-    <div class="max-w-7xl mx-auto flex justify-between items-center">
-      <h1 class="text-3xl font-extrabold">hichat</h1>
-      <nav>
-        <a href="#" class="px-4 py-2 text-white/80 hover:bg-white/20 rounded hover:text-white">Home</a>
-        <a href="#" class="px-4 py-2 text-white/80 hover:bg-white/20 rounded hover:text-white">Chat</a>
-        <a href="#" class="px-4 py-2 text-white/80 hover:bg-white/20 rounded hover:text-white">Login</a>
-    </div>
-  </header>
-
-  <main class="flex-1 max-w-7xl mx-auto p-6 flex items-center justify-center">
-    <section class="bg-black bg-opacity-10 rounded-xl shadow-xl p-12 flex flex-col items-center justify-center">
-      <div class="max-w-md w-full">
-        <h2 class="text-4xl font-extrabold text-center mb-6 text-white">Welcome to hichat</h2>
-        <p class="text-center text-gray-300 mb-8">
-          A premium, real‑time chat experience with sleek design and secure messaging.
-        </p>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-gray-900 text-white p-6 text-center">
-    <p>© 2025 hichat. All rights reserved.</p>
-  </footer>
-
-  <script type="module" src="/src/main.jsx"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HiChat — Enterprise Zero-Knowledge Messaging</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f5f3ff',
+                100: '#ede9fe',
+                500: '#8b5cf6',
+                600: '#7c3aed',
+                700: '#6d28d9',
+                950: '#070913',
+              }
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-[#070913] text-gray-100 min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

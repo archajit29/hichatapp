@@ -1,204 +1,161 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import WelcomePage from './pages/WelcomePage';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
+import { ShieldCheck, LogOut, Key, User } from 'lucide-react';
+import { useAuthStore } from './store/auth.store';
+import ProtectedRoute from './routes/ProtectedRoute';
 
-// Premium Navigation Bar (Global for Chat/Login)
+// Sleek Glassmorphism Navigation Bar
 function Navigation({ isLoggedIn, username, onLogout }) {
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav className="flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900 text-white shadow-lg w-full">
+    <nav className="sticky top-0 z-50 flex justify-between items-center px-6 md:px-12 py-4 bg-[#070913]/90 backdrop-blur-xl border-b border-white/10 text-white shadow-2xl w-full">
       <div className="flex items-center gap-8">
-        <Link to="/welcome" className="text-2xl font-extrabold tracking-tighter text-white hover:text-purple-300 transition">hichat</Link>
-        <div className="flex gap-6">
-          <Link to="/" className="text-white/80 hover:text-white transition">Home</Link>
-          <Link to="/chat" className="text-white/80 hover:text-white transition">Chat</Link>
-          <Link to="/login" className="text-white/80 hover:text-white font-semibold transition">
-            {isLoggedIn ? 'Vault Profile' : 'Login'}
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-600/30 group-hover:scale-105 transition-transform">
+            <ShieldCheck className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-black tracking-tight text-white group-hover:text-purple-300 transition">
+            hichat <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-400">E2EE</span>
+          </span>
+        </Link>
+
+        <div className="hidden md:flex items-center gap-1.5 bg-gray-900/70 p-1 rounded-xl border border-white/5">
+          <Link
+            to="/"
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isActive('/') || isActive('/home')
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Home
+          </Link>
+          <Link
+            to="/welcome"
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isActive('/welcome')
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Security & Docs
+          </Link>
+          <Link
+            to="/chat"
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isActive('/chat')
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Chat Stream
           </Link>
         </div>
       </div>
-      
-      {isLoggedIn && (
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-white/60">
-            Secure Session: <strong className="text-white">{username}</strong>
-          </span>
-          <button 
-            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded text-sm transition"
-            onClick={onLogout}
-          >
-            Sign Out
-          </button>
-        </div>
-      )}
+
+      <div className="flex items-center gap-4">
+        {isLoggedIn ? (
+          <div className="flex items-center gap-3">
+            <Link
+              to="/chat"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-purple-950/50 hover:bg-purple-900/60 border border-purple-500/30 text-xs text-purple-200 transition"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <User className="w-3.5 h-3.5 text-purple-400" />
+              <strong className="text-white font-semibold">{username}</strong>
+            </Link>
+            <button
+              className="flex items-center gap-1.5 bg-gray-900 hover:bg-rose-950/50 border border-white/10 hover:border-rose-500/40 text-gray-300 hover:text-rose-300 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer"
+              onClick={onLogout}
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Link
+              to="/login"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/25 transition-all transform hover:-translate-y-0.5"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Unlock Vault</span>
+            </Link>
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
 
-function HomePage({ session, onLogout }) {
-  return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
-      {/* Navigation Header */}
-      <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
-        <Link to="/welcome" className="text-2xl font-bold text-white cursor-pointer">hichat</Link>
-        <div className="flex items-center space-x-6">
-          <Link to="/" className="text-white hover:text-purple-300 font-semibold">Home</Link>
-          <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
-          <Link to="/login" className="text-white hover:text-purple-300">
-            {session?.isLoggedIn ? 'Vault Profile' : 'Login'}
-          </Link>
-          {session?.isLoggedIn && (
-            <div className="flex items-center gap-3 ml-2">
-              <span className="text-xs text-purple-200">
-                User: <strong className="text-white">{session.username}</strong>
-              </span>
-              <button 
-                className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded text-xs transition"
-                onClick={onLogout}
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <main className="flex-grow flex flex-col items-center justify-center text-center px-4 py-12">
-        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">hichat Home Hub</h1>
-        <p className="text-xl text-gray-400 max-w-2xl mb-8 leading-relaxed">
-          Welcome to your enterprise communication hub. Connect instantly or unlock your security key vault.
-        </p>
-
-        <div className="flex space-x-4">
-          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition shadow-lg">
-            Launch Chat Stream
-          </Link>
-          <Link to="/login" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition">
-            Unlock Key Vault
-          </Link>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full text-center py-6 bg-[#0a0a0f] text-gray-600 text-sm border-t border-gray-800">
-        © 2025 hichat Enterprise. All rights reserved.
-      </footer>
-    </div>
-  );
-}
-
-function WelcomePage() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-x-hidden">
-      {/* Navigation Header */}
-      <nav className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-purple-900 to-indigo-900">
-        <Link to="/welcome" className="text-2xl font-bold text-white">hichat</Link>
-        <div className="space-x-6">
-          <Link to="/" className="text-white hover:text-purple-300">Home</Link>
-          <Link to="/chat" className="text-white hover:text-purple-300">Chat</Link>
-          <Link to="/login" className="text-white hover:text-purple-300 font-semibold">Login</Link>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <main className="flex-grow flex flex-col items-center justify-center text-center px-4">
-        <h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight">Welcome to hichat</h1>
-        <p className="text-xl text-gray-400 max-w-2xl mb-10 leading-relaxed">
-          Experience the future of real-time messaging. End-to-end encrypted, high-performance, and beautifully designed.
-        </p>
-        <div className="flex space-x-4">
-          <Link to="/chat" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">
-            Launch Chat Stream
-          </Link>
-          <Link to="/login" className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition">
-            Unlock Key Vault
-          </Link>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full text-center py-6 bg-[#0a0a0f] text-gray-600 text-sm border-t border-gray-800">
-        © 2025 hichat Enterprise. All rights reserved.
-      </footer>
-    </div>
-  );
-}
-
-// Footer Component (Global for Chat/Login)
+// Global Footer Component
 function Footer() {
   return (
-    <footer className="py-8 text-center text-gray-500 text-sm border-t border-white/5 w-full">
-      <p>© 2025 hichat Enterprise. All rights reserved.</p>
+    <footer className="py-8 text-center text-gray-500 text-xs border-t border-white/5 w-full bg-[#070913]">
+      <p>© 2026 hichat Enterprise Platform. Zero-Knowledge E2EE Architecture.</p>
     </footer>
   );
 }
 
-export default function App() {
-  const [session, setSession] = useState({
-    isLoggedIn: false,
-    username: '',
-  });
-
-  const syncSession = () => {
-    const token = localStorage.getItem('hichat_jwt_token');
-    const userStr = localStorage.getItem('hichat_user');
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setSession({ isLoggedIn: true, username: user.username });
-      } catch (e) {
-        setSession({ isLoggedIn: false, username: '' });
-      }
-    } else {
-      setSession({ isLoggedIn: false, username: '' });
-    }
-  };
+// Layout wrapper
+function MainLayout() {
+  const location = useLocation();
+  const isChatRoute = location.pathname === '/chat';
+  const { isAuthenticated, user, logout, checkAuth } = useAuthStore();
 
   useEffect(() => {
-    syncSession();
-    const interval = setInterval(syncSession, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('hichat_jwt_token');
-    localStorage.removeItem('hichat_user');
-    setSession({ isLoggedIn: false, username: '' });
-    window.location.href = '/login';
-  };
+    checkAuth();
+  }, [checkAuth]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage session={session} onLogout={handleLogout} />} />
-        <Route path="/home" element={<HomePage session={session} onLogout={handleLogout} />} />
-        <Route path="/welcome" element={<WelcomePage />} />
-        
-        {/* For Chat and Login, we use the standard layout with global nav/footer */}
-        <Route path="/chat" element={
-          <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-            <Navigation isLoggedIn={session.isLoggedIn} username={session.username} onLogout={handleLogout} />
-            <main className="flex-grow flex flex-col"><Chat /></main>
-            <Footer />
-          </div>
-        } />
-        
-        <Route path="/login" element={
-          <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-            <Navigation isLoggedIn={session.isLoggedIn} username={session.username} onLogout={handleLogout} />
-            <main className="flex-grow flex flex-col"><Login /></main>
-            <Footer />
-          </div>
-        } />
+    <div className="min-h-screen bg-[#070913] text-white flex flex-col font-sans w-full">
+      {!isChatRoute && (
+        <Navigation 
+          isLoggedIn={isAuthenticated} 
+          username={user?.username} 
+          onLogout={logout} 
+        />
+      )}
+      
+      <main className="flex-1 flex flex-col w-full">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          } />
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20">
+              <h2 className="text-5xl font-extrabold text-purple-400 mb-4">404</h2>
+              <p className="text-gray-400 mb-6">Page Not Found</p>
+              <Link to="/" className="px-6 py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-500 transition">
+                Return Home
+              </Link>
+            </div>
+          } />
+        </Routes>
+      </main>
+      
+      {!isChatRoute && <Footer />}
+    </div>
+  );
+}
 
-        <Route path="*" element={
-          <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center">
-            <h2 className="text-4xl font-bold mb-4">404 - Not Found</h2>
-            <Link to="/" className="text-indigo-400 hover:underline">Return Home</Link>
-          </div>
-        } />
-      </Routes>
+export default function App() {
+  return (
+    <BrowserRouter>
+      <MainLayout />
     </BrowserRouter>
   );
 }

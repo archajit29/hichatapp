@@ -1,94 +1,154 @@
-import { Database } from "bun:sqlite";
-import path from "path";
+import { pool, query, transaction, connect, disconnect, healthCheck, extractQueryName, isPostgresConnected } from "./postgres";
+import { connectRedis, disconnectRedis, redis, healthCheckRedis, isRedisConnected } from "./redis";
+import { logger } from "../core/logger";
+import { runPendingMigrations } from "./migrator";
+import { runSeeds } from "./seeds/index";
 
-const dbPath = path.join(__dirname, "../../hichat.db");
-export const db = new Database(dbPath, { create: true });
+const dbLogger = logger.child({ module: "db" });
 
-// Enable Foreign Keys & WAL mode for high performance
-db.exec("PRAGMA foreign_keys = ON;");
-db.exec("PRAGMA journal_mode = WAL;");
+export const REQUIRED_TABLES = [
+  "schema_migrations",
+  "users",
+  "rooms",
+  "direct_messages",
+  "messages",
+  "user_devices",
+  "signed_prekeys",
+  "one_time_prekeys",
+  "mailbox",
+  "message_deliveries",
+  "refresh_tokens",
+] as const;
 
-export function initDb() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      public_key TEXT,
-      avatar_url TEXT,
-      status TEXT DEFAULT 'online',
-      custom_status TEXT DEFAULT 'Available',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+let dbReady = false;
 
-    CREATE TABLE IF NOT EXISTS rooms (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT,
-      is_private INTEGER DEFAULT 0,
-      created_by TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (created_by) REFERENCES users(id)
-    );
+export function isDatabaseReady(): boolean {
+  return dbReady;
+}
 
-    CREATE TABLE IF NOT EXISTS direct_messages (
-      id TEXT PRIMARY KEY,
-      user_a TEXT NOT NULL,
-      user_b TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_a, user_b),
-      FOREIGN KEY (user_a) REFERENCES users(id),
-      FOREIGN KEY (user_b) REFERENCES users(id)
-    );
+export async function verifyRequiredTables(): Promise<string[]> {
+  dbLogger.info("🔍 Verifying required database schema tables...");
+  const missingTables: string[] = [];
 
-    CREATE TABLE IF NOT EXISTS messages (
-      id TEXT PRIMARY KEY,
-      room_id TEXT NOT NULL,
-      sender_id TEXT NOT NULL,
-      sender_username TEXT NOT NULL,
-      payloads TEXT NOT NULL, -- JSON string mapping user_id/socket_id to ciphertext
-      media_url TEXT,
-      file_name TEXT,
-      file_size INTEGER,
-      is_edited INTEGER DEFAULT 0,
-      is_deleted INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Performance Indexes for Dubai Enterprise Scale
-    CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages(room_id, created_at);
-    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-  `);
-
-  try { db.exec("ALTER TABLE messages ADD COLUMN file_name TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN file_size INTEGER;"); } catch (e) {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN is_deleted INTEGER DEFAULT 0;"); } catch (e) {}
-  try { db.exec("ALTER TABLE messages ADD COLUMN is_edited INTEGER DEFAULT 0;"); } catch (e) {}
-
-  // Insert default channels
-  const defaultRooms = [
-    { id: "general", name: "general", description: "General enterprise chatter", is_private: 0 },
-    { id: "tech-lounge", name: "tech-lounge", description: "Bun, Hono & High-Perf Systems", is_private: 0 },
-    { id: "crypto-security", name: "crypto-security", description: "E2EE, Security & Web Crypto", is_private: 0 },
-    { id: "dubai-tech-hub", name: "dubai-tech-hub", description: "UAE & Middle East Tech Lounge", is_private: 0 },
-    { id: "announcements", name: "announcements", description: "Official announcements", is_private: 0 },
-    { id: "help", name: "help", description: "Get help from the community", is_private: 0 },
-  ];
-
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO rooms (id, name, description, is_private)
-    VALUES ($id, $name, $description, $is_private)
-  `);
-
-  for (const room of defaultRooms) {
-    stmt.run({
-      $id: room.id,
-      $name: room.name,
-      $description: room.description,
-      $is_private: room.is_private,
-    });
+  for (const tableName of REQUIRED_TABLES) {
+    try {
+      await query(`SELECT 1 FROM ${tableName} LIMIT 0;`);
+    } catch (err: any) {
+      dbLogger.error({ tableName, err: err.message }, `❌ Missing required table: ${tableName}`);
+      missingTables.push(tableName);
+    }
   }
 
-  console.log("✅ SQLite Database initialized with Enterprise Indexes & DM Support!");
+  if (missingTables.length > 0) {
+    throw new Error(`Database verification failed: missing required tables [${missingTables.join(", ")}]`);
+  }
+
+  dbLogger.info({ tableCount: REQUIRED_TABLES.length }, "✅ All required database tables verified successfully");
+  return [...REQUIRED_TABLES];
 }
+
+function normalizePlaceholders(sql: string): string {
+  let paramIndex = 1;
+  return sql.replace(/\?/g, () => `$${paramIndex++}`);
+}
+
+class PostgresDatabase {
+  public pool = pool;
+
+  exec(sql: string): Promise<any> {
+    return query(sql);
+  }
+
+  query<T = any>(sql: string, params?: any[]): Promise<any> {
+    return query<T>(normalizePlaceholders(sql), params);
+  }
+
+  prepare(sql: string) {
+    const pgSql = normalizePlaceholders(sql);
+
+    return {
+      run: async (...args: any[]): Promise<any> => {
+        const res = await query(pgSql, args);
+        return {
+          changes: res.rowCount || 0,
+          rowCount: res.rowCount || 0,
+          rows: res.rows || [],
+        };
+      },
+
+      get: async (...args: any[]): Promise<any> => {
+        const res = await query(pgSql, args);
+        return res.rows[0] || null;
+      },
+
+      all: async (...args: any[]): Promise<any> => {
+        const res = await query(pgSql, args);
+        return res.rows || [];
+      },
+    };
+  }
+
+  transaction<T>(fn: (client?: any) => Promise<T> | T): () => Promise<T> {
+    return () => {
+      return transaction((client) => {
+        return fn(client);
+      });
+    };
+  }
+}
+
+export const db = new PostgresDatabase();
+
+export async function initDb(): Promise<void> {
+  try {
+    dbReady = false;
+    dbLogger.info("🚀 Initializing PostgreSQL Database Connection & Schemas...");
+
+    // 1. Connect PostgreSQL
+    await connect();
+
+    // 2. Run migrations
+    const appliedMigrations = await runPendingMigrations();
+    if (appliedMigrations.length > 0) {
+      dbLogger.info({ count: appliedMigrations.length, migrations: appliedMigrations }, "✅ PostgreSQL schema migrations applied successfully");
+    } else {
+      dbLogger.info("✨ PostgreSQL database schema is up-to-date");
+    }
+
+    // 3. Verify required tables exist
+    await verifyRequiredTables();
+
+    // 4. Run seed data
+    await runSeeds();
+    dbLogger.info("🌱 Database seeds executed successfully");
+
+    // 5. Connect Redis & verify with PING (Phase 13D)
+    dbLogger.info("🔴 Initializing Upstash Redis Connection...");
+    await connectRedis();
+    const pingResult = await redis.ping();
+    dbLogger.info({ pingResult }, "✅ Redis connection verified with PING");
+
+    // 6. Mark DB initialized and ready
+    dbReady = true;
+  } catch (err: any) {
+    dbReady = false;
+    dbLogger.error({ err }, "❌ Failed to initialize database infrastructure");
+    throw err;
+  }
+}
+
+export {
+  pool,
+  query,
+  transaction,
+  connect,
+  disconnect,
+  healthCheck,
+  isPostgresConnected,
+  connectRedis,
+  disconnectRedis,
+  redis,
+  healthCheckRedis,
+  isRedisConnected,
+};
+export default db;

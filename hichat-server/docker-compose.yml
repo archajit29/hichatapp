@@ -1,0 +1,107 @@
+# ==============================================================================
+# HiChat Enterprise Local Production Simulation Stack
+# Docker Compose environment simulating AWS ECS + RDS PostgreSQL + Redis
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # HiChat Backend Application (Bun + Hono + Socket.IO)
+  # ----------------------------------------------------------------------------
+  hichat-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hichat-server-prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://hichat_user:hichat_secure_password_123@postgres:5432/hichat_prod?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=hichat_enterprise_local_jwt_secret_key_32bytes_minimum
+      - CORS_ORIGIN=*
+      - TRUST_PROXY=true
+      - LOG_LEVEL=info
+      - DB_MAX_CONNECTIONS=10
+      - DB_IDLE_TIMEOUT_MS=30000
+      - DB_CONNECTION_TIMEOUT_MS=10000
+      - MAILBOX_RETRY_INTERVAL_MS=5000
+      - MAILBOX_MAX_RETRIES=5
+      - MAILBOX_RETRY_DELAYS=0,5000,15000,30000,60000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    stop_grace_period: 30s
+    networks:
+      - hichat-network
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL Database (Simulates Amazon RDS Multi-AZ)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: hichat-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hichat_user
+      POSTGRES_PASSWORD: hichat_secure_password_123
+      POSTGRES_DB: hichat_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hichat_user -d hichat_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - hichat-network
+
+  # ----------------------------------------------------------------------------
+  # Redis Cache & PubSub (Simulates Upstash Redis Cluster)
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: hichat-redis-prod
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - hichat-network
+
+# ------------------------------------------------------------------------------
+# Persistent Storage Volumes & Network
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  hichat-network:
+    driver: bridge
